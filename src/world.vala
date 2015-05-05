@@ -236,7 +236,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
     private Gdk.Pixbuf? night_pixbuf;
     private Item standalone_location;
     [GtkChild]
-    private ContentView content_view;
+    private ContentViewWorld content_view;
     [GtkChild]
     private Gtk.Widget empty_view;
     [GtkChild]
@@ -309,19 +309,6 @@ public class Face : Gtk.Stack, Clocks.Clock {
             content_view.queue_draw ();
             update_standalone ();
         });
-    }
-
-    [GtkCallback]
-    private void item_activated (ContentItem item) {
-        show_standalone ((Item) item);
-    }
-
-    [GtkCallback]
-    private void delete_selected () {
-        foreach (var i in content_view.get_selected_items ()) {
-            locations.remove ((Item) i);
-        }
-        save ();
     }
 
     [GtkCallback]
@@ -431,23 +418,6 @@ public class Face : Gtk.Stack, Clocks.Clock {
             dialog.destroy ();
         });
         dialog.show ();
-    }
-
-    public void activate_select_all () {
-        content_view.select_all ();
-    }
-
-    public void activate_select_none () {
-        content_view.unselect_all ();
-    }
-
-    public bool escape_pressed () {
-        if (visible_child == standalone) {
-            reset_view ();
-            return true;
-        }
-
-        return content_view.escape_pressed ();
     }
 
     public void reset_view () {

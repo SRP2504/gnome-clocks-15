@@ -46,10 +46,8 @@
       </object>
     </child>
     <child>
-      <object class="ClocksContentView" id="content_view">
+      <object class="ClocksContentViewWorld" id="content_view">
         <property name="visible">True</property>
-        <signal name="item-activated" handler="item_activated" swapped="no"/>
-        <signal name="delete-selected" handler="delete_selected" swapped="no"/>
         <signal name="notify::empty" handler="empty_changed" swapped="no"/>
       </object>
     </child>
