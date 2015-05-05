@@ -445,6 +445,199 @@ private class IconView : Gtk.IconView {
     }
 }
 
+/*---------------------------------------------------------------------------------*/
+private class GridView : Gtk.Grid {
+    public enum Mode {
+        NORMAL,
+        SELECTION
+    }
+
+    public enum Column {
+        SELECTED,
+        ITEM,
+        COLUMNS
+    }
+
+	public Gtk.ListStore model;
+    public GridView () {
+        model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
+        this.set_column_spacing (1);
+        ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
+    }
+
+    public Gtk.Overlay get_item_overlay (Object item) {
+        string text;
+        string subtext;
+        Gdk.Pixbuf? pixbuf;
+        string css_class;
+        ((ContentItem)item).get_thumb_properties (out text, out subtext, out pixbuf, out css_class);
+        Gtk.Label textl = new Gtk.Label (text);
+        Gtk.Label subtextl = new Gtk.Label (subtext);
+        Gtk.Label name = new Gtk.Label (((ContentItem) item).name);
+        textl.get_style_context ().add_class ("time-label");
+        //textl.set_line_wrap (true);
+        //subtextl.set_line_wrap (true);
+        //name.set_line_wrap (true);
+
+        //Gtk.Grid item_grid = new Gtk.Grid();
+        //item_grid.attach (textl, 0, 0, 1, 1);
+        //item_grid.attach (subtextl, 0, 1, 1, 1);
+        //item_grid.attach (new Gtk.Image.from_pixbuf (pixbuf), 0, 2, 1, 1);
+        //item_grid.attach (name, 0, 3, 1, 1);
+        //item_grid.show_all ();
+
+        Gtk.Overlay overlay = new Gtk.Overlay();
+        pixbuf = pixbuf.scale_simple (285, 589, Gdk.InterpType.BILINEAR);
+        Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
+        ((Gtk.Container) overlay).add (weather_image);
+
+        Gtk.Frame details_frame = new Gtk.Frame (null);
+        Gtk.Grid details_grid = new Gtk.Grid();
+        details_grid.attach (textl, 0, 0, 1, 1);
+        details_grid.attach (subtextl, 0, 1, 1, 1);
+        details_grid.attach (name, 0, 2, 1, 1);
+        ((Gtk.Widget) details_grid).halign = Gtk.Align.CENTER;
+        ((Gtk.Widget) details_grid).valign = Gtk.Align.CENTER;
+        details_grid.show_all ();
+        details_frame.add (details_grid);
+        details_frame.show_all ();
+        var context = details_frame.get_style_context ();
+        if (css_class == "light") {
+            context.add_class ("light-stripe");
+        } else {
+            context.add_class ("dark-stripe");
+        }
+        ((Gtk.Widget) details_frame).valign = Gtk.Align.CENTER;
+        overlay.add_overlay (details_frame);
+        overlay.show_all ();
+        return overlay;
+    }
+
+    public void add_item (Object item) {
+        var store = (Gtk.ListStore) model;
+        Gtk.TreeIter i;
+        store.append (out i);
+        store.set (i, Column.SELECTED, false, Column.ITEM, item);
+        ((Gtk.Container) this).add (get_item_overlay (item));
+    }
+
+    public void prepend (Object item) {
+        var store = (Gtk.ListStore) model;
+        Gtk.TreeIter i;
+        store.insert (out i, 0);
+        store.set (i, Column.SELECTED, false, Column.ITEM, item);
+    }
+}
+
+public class ContentViewWorld : Gtk.Bin {
+    public bool empty { get; private set; default = true; }
+
+    private GridView grid_view;
+    private Gtk.Button select_button;
+    private Gtk.Button cancel_button;
+    private GLib.MenuModel selection_menu;
+    private Gtk.MenuButton selection_menubutton;
+    private Gtk.Label selection_menubutton_label;
+    private Gtk.Grid grid;
+    private Gtk.Button delete_button;
+    private HeaderBar? header_bar;
+
+    construct {
+        grid_view = new GridView ();
+
+        var scrolled_window = new Gtk.ScrolledWindow (null, null);
+        scrolled_window.add (grid_view);
+        scrolled_window.hexpand = true;
+        scrolled_window.vexpand = true;
+        scrolled_window.halign = Gtk.Align.FILL;
+        scrolled_window.valign = Gtk.Align.FILL;
+
+        grid = new Gtk.Grid ();
+        grid.attach (scrolled_window, 0, 0, 1, 1);
+
+        var action_bar = new Gtk.ActionBar ();
+        action_bar.no_show_all = true;
+        grid.attach (action_bar, 0, 1, 1, 1);
+
+        delete_button = new Gtk.Button ();
+        delete_button.label = _("Delete");
+        delete_button.visible = true;
+        delete_button.sensitive = false;
+        delete_button.halign = Gtk.Align.END;
+        delete_button.hexpand = true;
+        delete_button.clicked.connect (() => {
+            delete_selected ();
+        });
+
+        action_bar.pack_end (delete_button);
+
+        add (grid);
+        grid.show_all ();
+    }
+
+    public virtual signal void delete_selected () {
+        //frame_view.remove_selected ();
+        update_props_on_remove ();
+    }
+
+    public void add_item (ContentItem item) {
+        grid_view.add_item (item);
+        update_props_on_insert (item);
+    }
+
+    public void prepend (ContentItem item) {
+        grid_view.prepend (item);
+        update_props_on_insert (item);
+    }
+
+    private void update_props_on_remove () {
+        Gtk.TreeIter iter;
+
+        var local_empty = true;
+        if (grid_view.model.get_iter_first (out iter)) {
+            local_empty = false;
+        }
+
+        if (local_empty != empty) {
+            empty = local_empty;
+        }
+    }
+
+    // We cannot connect to the row-inserted signal because the row is
+    // still empty so we cannot check item.selectable
+    private void update_props_on_insert (ContentItem item) {
+        if (empty) {
+            empty = false;
+        }
+    }
+
+    public void set_header_bar (HeaderBar bar) {
+        header_bar = bar;
+    }
+
+    public void update_header_bar () {
+
+    }
+
+    public delegate int SortFunc(ContentItem item1, ContentItem item2);
+
+    public void set_sorting(Gtk.SortType sort_type, SortFunc sort_func) {
+        var sortable = grid_view.model as Gtk.TreeSortable;
+        sortable.set_sort_column_id (1, sort_type);
+        sortable.set_sort_func (1, (model, iter1, iter2) => {
+            ContentItem item1;
+            ContentItem item2;
+
+            model.get (iter1, IconView.Column.ITEM, out item1);
+            model.get (iter2, IconView.Column.ITEM, out item2);
+
+            return sort_func (item1, item2);
+        });
+    }
+}
+
+/*----------------------------------------------------------------------------------*/
+
 public class ContentView : Gtk.Bin {
     public bool empty { get; private set; default = true; }
 
