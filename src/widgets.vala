@@ -462,6 +462,7 @@ private class GridView : Gtk.Grid {
     public GridView () {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
         this.set_column_spacing (1);
+        ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
         //get_style_context ().add_class ("clocks-tiles-view");
         //get_style_context ().add_class ("content-view");
         //set_item_padding (0);
@@ -473,20 +474,55 @@ private class GridView : Gtk.Grid {
         Gtk.TreeIter i;
         store.append (out i);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
-        Gtk.Grid item_grid = new Gtk.Grid();
+
         string text;
         string subtext;
         Gdk.Pixbuf? pixbuf;
         string css_class;
         ((ContentItem)item).get_thumb_properties (out text, out subtext, out pixbuf, out css_class);
-        Gtk.Label textl = new Gtk.Label(text);
-        Gtk.Label subtextl = new Gtk.Label(subtext);
-        item_grid.attach (textl, 0, 0, 1, 1);
-        item_grid.attach (subtextl, 0, 1, 1, 1);
-        item_grid.attach (new Gtk.Image.from_pixbuf (pixbuf), 0, 2, 1, 1);
-        item_grid.attach (new Gtk.Label(((ContentItem)item).name), 0, 3, 1, 1);
-        ((Gtk.Container)this).add (item_grid);
-        item_grid.show_all();
+        Gtk.Label textl = new Gtk.Label (text);
+        Gtk.Label subtextl = new Gtk.Label (subtext);
+        Gtk.Label name = new Gtk.Label (((ContentItem) item).name);
+        textl.get_style_context ().add_class ("time-label");
+        //textl.set_line_wrap (true);
+        //subtextl.set_line_wrap (true);
+        //name.set_line_wrap (true);
+
+        //Gtk.Grid item_grid = new Gtk.Grid();
+        //item_grid.attach (textl, 0, 0, 1, 1);
+        //item_grid.attach (subtextl, 0, 1, 1, 1);
+        //item_grid.attach (new Gtk.Image.from_pixbuf (pixbuf), 0, 2, 1, 1);
+        //item_grid.attach (name, 0, 3, 1, 1);
+        //item_grid.show_all ();
+
+        Gtk.Overlay overlay = new Gtk.Overlay();
+
+        pixbuf = pixbuf.scale_simple (270, 683, Gdk.InterpType.BILINEAR);
+        Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
+        ((Gtk.Container) overlay).add (weather_image);
+
+        Gtk.Frame details_frame = new Gtk.Frame (null);
+        Gtk.Grid details_grid = new Gtk.Grid();
+        details_grid.attach (textl, 0, 0, 1, 1);
+        details_grid.attach (subtextl, 0, 1, 1, 1);
+        details_grid.attach (name, 0, 2, 1, 1);
+        ((Gtk.Widget) details_grid).halign = Gtk.Align.CENTER;
+        ((Gtk.Widget) details_grid).valign = Gtk.Align.CENTER;
+        details_grid.show_all ();
+        details_frame.add (details_grid);
+        details_frame.show_all ();
+        var context = details_frame.get_style_context ();
+        if (css_class == "light") {
+            context.add_class ("light-stripe");
+        } else {
+            context.add_class ("dark-stripe");
+        }
+        ((Gtk.Widget) details_frame).valign = Gtk.Align.CENTER;
+        overlay.add_overlay (details_frame);
+        overlay.show_all ();
+
+        ((Gtk.Container) this).add (overlay);
+
         print("Added\n");
         print(text);
         print(subtext);

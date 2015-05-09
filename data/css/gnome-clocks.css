@@ -21,6 +21,21 @@ ClocksWindow > .frame:backdrop {
 }
 
 /* world */
+.dark-stripe {
+    background-color: rgba(0, 0, 0, 0.4);
+    color: white;
+    border: 0;
+}
+
+.light-stripe {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: black;
+    border: 0;
+}
+
+.time-label {
+    font-size: 32px;
+}
 
 .clocks-digital-renderer.light.stripe {
     background-color: rgba(255, 255, 255, 0.4);
