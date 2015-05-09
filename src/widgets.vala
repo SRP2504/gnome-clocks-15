@@ -619,6 +619,10 @@ public class ContentViewWorld : Gtk.Bin {
 
     }
 
+    public void window_size_changed () {
+        print ("size changed\n");
+    }
+
     public delegate int SortFunc(ContentItem item1, ContentItem item2);
 
     public void set_sorting(Gtk.SortType sort_type, SortFunc sort_func) {
