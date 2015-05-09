@@ -463,18 +463,9 @@ private class GridView : Gtk.Grid {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
         this.set_column_spacing (1);
         ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
-        //get_style_context ().add_class ("clocks-tiles-view");
-        //get_style_context ().add_class ("content-view");
-        //set_item_padding (0);
-        //set_margin (12);
     }
 
-    public void add_item (Object item) {
-        var store = (Gtk.ListStore) model;
-        Gtk.TreeIter i;
-        store.append (out i);
-        store.set (i, Column.SELECTED, false, Column.ITEM, item);
-
+    public Gtk.Overlay get_item_overlay (Object item) {
         string text;
         string subtext;
         Gdk.Pixbuf? pixbuf;
@@ -496,8 +487,7 @@ private class GridView : Gtk.Grid {
         //item_grid.show_all ();
 
         Gtk.Overlay overlay = new Gtk.Overlay();
-
-        pixbuf = pixbuf.scale_simple (270, 683, Gdk.InterpType.BILINEAR);
+        pixbuf = pixbuf.scale_simple (285, 589, Gdk.InterpType.BILINEAR);
         Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
         ((Gtk.Container) overlay).add (weather_image);
 
@@ -520,12 +510,15 @@ private class GridView : Gtk.Grid {
         ((Gtk.Widget) details_frame).valign = Gtk.Align.CENTER;
         overlay.add_overlay (details_frame);
         overlay.show_all ();
+        return overlay;
+    }
 
-        ((Gtk.Container) this).add (overlay);
-
-        print("Added\n");
-        print(text);
-        print(subtext);
+    public void add_item (Object item) {
+        var store = (Gtk.ListStore) model;
+        Gtk.TreeIter i;
+        store.append (out i);
+        store.set (i, Column.SELECTED, false, Column.ITEM, item);
+        ((Gtk.Container) this).add (get_item_overlay (item));
     }
 
     public void prepend (Object item) {
