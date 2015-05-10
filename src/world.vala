@@ -290,6 +290,11 @@ public class Face : Gtk.Stack, Clocks.Clock {
             return 0;
         });
 
+        content_view.box_view.delete_location.connect ((item) => {
+            locations.remove ((Item) item);
+            save ();
+        });
+
         load ();
 
         if (settings.get_boolean ("geolocation")) {
@@ -306,7 +311,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             foreach (var l in locations) {
                 l.tick();
             }
-            content_view.queue_draw ();
+            content_view.box_view.update_time ();
             update_standalone ();
         });
     }
