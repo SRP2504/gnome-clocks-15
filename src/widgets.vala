@@ -446,7 +446,7 @@ private class IconView : Gtk.IconView {
 }
 
 /*---------------------------------------------------------------------------------*/
-private class GridView : Gtk.Grid {
+private class BoxView : Gtk.Box {
     public enum Mode {
         NORMAL,
         SELECTION
@@ -459,9 +459,9 @@ private class GridView : Gtk.Grid {
     }
 
 	public Gtk.ListStore model;
-    public GridView () {
+    public BoxView () {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
-        this.set_column_spacing (1);
+        this.set_spacing (1);
         ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
     }
 
@@ -479,15 +479,13 @@ private class GridView : Gtk.Grid {
         //subtextl.set_line_wrap (true);
         //name.set_line_wrap (true);
 
-        //Gtk.Grid item_grid = new Gtk.Grid();
-        //item_grid.attach (textl, 0, 0, 1, 1);
-        //item_grid.attach (subtextl, 0, 1, 1, 1);
-        //item_grid.attach (new Gtk.Image.from_pixbuf (pixbuf), 0, 2, 1, 1);
-        //item_grid.attach (name, 0, 3, 1, 1);
-        //item_grid.show_all ();
-
         Gtk.Overlay overlay = new Gtk.Overlay();
-        pixbuf = pixbuf.scale_simple (285, 589, Gdk.InterpType.BILINEAR);
+        Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+        Gtk.Image quit = new Gtk.Image.from_stock (Gtk.STOCK_CLOSE, Gtk.IconSize.MENU);
+        ((Gtk.Widget) quit).set_halign (Gtk.Align.END);
+        out_box.pack_start (quit, false, false, 10);
+
+        pixbuf = pixbuf.scale_simple (285, 510, Gdk.InterpType.BILINEAR);
         Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
         ((Gtk.Container) overlay).add (weather_image);
 
@@ -508,7 +506,9 @@ private class GridView : Gtk.Grid {
             context.add_class ("dark-stripe");
         }
         ((Gtk.Widget) details_frame).valign = Gtk.Align.CENTER;
-        overlay.add_overlay (details_frame);
+        out_box.pack_start (details_frame);
+        out_box.show_all ();
+        overlay.add_overlay (out_box);
         overlay.show_all ();
         return overlay;
     }
@@ -518,7 +518,7 @@ private class GridView : Gtk.Grid {
         Gtk.TreeIter i;
         store.append (out i);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
-        ((Gtk.Container) this).add (get_item_overlay (item));
+        this.pack_end (get_item_overlay (item), true, true, 1);
     }
 
     public void prepend (Object item) {
@@ -532,7 +532,7 @@ private class GridView : Gtk.Grid {
 public class ContentViewWorld : Gtk.Bin {
     public bool empty { get; private set; default = true; }
 
-    private GridView grid_view;
+    private BoxView box_view;
     private Gtk.Button select_button;
     private Gtk.Button cancel_button;
     private GLib.MenuModel selection_menu;
@@ -543,10 +543,10 @@ public class ContentViewWorld : Gtk.Bin {
     private HeaderBar? header_bar;
 
     construct {
-        grid_view = new GridView ();
+        box_view = new BoxView ();
 
         var scrolled_window = new Gtk.ScrolledWindow (null, null);
-        scrolled_window.add (grid_view);
+        scrolled_window.add (box_view);
         scrolled_window.hexpand = true;
         scrolled_window.vexpand = true;
         scrolled_window.halign = Gtk.Align.FILL;
@@ -581,12 +581,12 @@ public class ContentViewWorld : Gtk.Bin {
     }
 
     public void add_item (ContentItem item) {
-        grid_view.add_item (item);
+        box_view.add_item (item);
         update_props_on_insert (item);
     }
 
     public void prepend (ContentItem item) {
-        grid_view.prepend (item);
+        box_view.prepend (item);
         update_props_on_insert (item);
     }
 
@@ -594,7 +594,7 @@ public class ContentViewWorld : Gtk.Bin {
         Gtk.TreeIter iter;
 
         var local_empty = true;
-        if (grid_view.model.get_iter_first (out iter)) {
+        if (box_view.model.get_iter_first (out iter)) {
             local_empty = false;
         }
 
@@ -626,7 +626,7 @@ public class ContentViewWorld : Gtk.Bin {
     public delegate int SortFunc(ContentItem item1, ContentItem item2);
 
     public void set_sorting(Gtk.SortType sort_type, SortFunc sort_func) {
-        var sortable = grid_view.model as Gtk.TreeSortable;
+        var sortable = box_view.model as Gtk.TreeSortable;
         sortable.set_sort_column_id (1, sort_type);
         sortable.set_sort_func (1, (model, iter1, iter2) => {
             ContentItem item1;
