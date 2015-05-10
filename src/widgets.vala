@@ -483,7 +483,21 @@ private class BoxView : Gtk.Box {
         Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
         Gtk.Image quit = new Gtk.Image.from_stock (Gtk.STOCK_CLOSE, Gtk.IconSize.MENU);
         ((Gtk.Widget) quit).set_halign (Gtk.Align.END);
-        out_box.pack_start (quit, false, false, 10);
+        Gtk.EventBox event_box = new Gtk.EventBox ();
+        ((Gtk.Container) event_box).add (quit);
+        event_box.button_press_event.connect (() => {
+            model.foreach ((model, path, iter) => {
+                Object item_in_list;
+                ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+                if (item_in_list == item) {
+                    ((Gtk.ListStore) model).remove (iter);
+                    return true;
+                }
+                return false;
+            });
+            return false;
+        });
+        out_box.pack_start (event_box, false, false, 10);
 
         pixbuf = pixbuf.scale_simple (285, 510, Gdk.InterpType.BILINEAR);
         Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
@@ -620,7 +634,7 @@ public class ContentViewWorld : Gtk.Bin {
     }
 
     public void window_size_changed () {
-        print ("size changed\n");
+        //print ("size changed\n");
     }
 
     public delegate int SortFunc(ContentItem item1, ContentItem item2);
