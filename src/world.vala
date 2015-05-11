@@ -290,6 +290,11 @@ public class Face : Gtk.Stack, Clocks.Clock {
             return 0;
         });
 
+        content_view.box_view.delete_location.connect ((item) => {
+            locations.remove ((Item) item);
+            save ();
+        });
+
         load ();
 
         if (settings.get_boolean ("geolocation")) {

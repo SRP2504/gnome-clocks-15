@@ -446,7 +446,7 @@ private class IconView : Gtk.IconView {
 }
 
 /*---------------------------------------------------------------------------------*/
-private class BoxView : Gtk.Box {
+public class BoxView : Gtk.Box {
     public enum Mode {
         NORMAL,
         SELECTION
@@ -463,7 +463,10 @@ private class BoxView : Gtk.Box {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
         this.set_spacing (1);
         ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
+        this.hexpand = false;
     }
+
+    public signal void delete_location (Object item);
 
     public Gtk.Overlay get_item_overlay (Object item) {
         string text;
@@ -481,6 +484,7 @@ private class BoxView : Gtk.Box {
 
         Gtk.Overlay overlay = new Gtk.Overlay();
         Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+
         Gtk.Image quit = new Gtk.Image.from_stock (Gtk.STOCK_CLOSE, Gtk.IconSize.MENU);
         ((Gtk.Widget) quit).set_halign (Gtk.Align.END);
         Gtk.EventBox event_box = new Gtk.EventBox ();
@@ -491,6 +495,8 @@ private class BoxView : Gtk.Box {
                 ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
                 if (item_in_list == item) {
                     ((Gtk.ListStore) model).remove (iter);
+                    delete_location (item);
+                    overlay.destroy ();
                     return true;
                 }
                 return false;
@@ -520,8 +526,9 @@ private class BoxView : Gtk.Box {
             context.add_class ("dark-stripe");
         }
         ((Gtk.Widget) details_frame).valign = Gtk.Align.CENTER;
-        out_box.pack_start (details_frame);
+        out_box.pack_start (details_frame, true, true, 1);
         out_box.show_all ();
+
         overlay.add_overlay (out_box);
         overlay.show_all ();
         return overlay;
@@ -546,7 +553,7 @@ private class BoxView : Gtk.Box {
 public class ContentViewWorld : Gtk.Bin {
     public bool empty { get; private set; default = true; }
 
-    private BoxView box_view;
+    public BoxView box_view;
     private Gtk.Button select_button;
     private Gtk.Button cancel_button;
     private GLib.MenuModel selection_menu;
