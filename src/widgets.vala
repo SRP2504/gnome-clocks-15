@@ -459,16 +459,19 @@ public class BoxView : Gtk.Box {
     }
 
 	public Gtk.ListStore model;
+    private GLib.Settings settings;
     public BoxView () {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
         this.set_spacing (1);
         ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
         this.hexpand = false;
+        settings = new Settings ("org.gnome.clocks.state.window");
+        settings.delay ();
     }
 
     public signal void delete_location (Object item);
 
-    public Gtk.Overlay get_item_overlay (Object item) {
+    public Gtk.Overlay get_item_overlay (Object item, int width, int height) {
         string text;
         string subtext;
         Gdk.Pixbuf? pixbuf;
@@ -501,14 +504,15 @@ public class BoxView : Gtk.Box {
                 }
                 return false;
             });
+            remove_items ();
+            load_items ();
             return false;
         });
         out_box.pack_start (event_box, false, false, 10);
 
-        pixbuf = pixbuf.scale_simple (285, 510, Gdk.InterpType.BILINEAR);
+        pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
         Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
         ((Gtk.Container) overlay).add (weather_image);
-
         Gtk.Frame details_frame = new Gtk.Frame (null);
         Gtk.Grid details_grid = new Gtk.Grid();
         details_grid.attach (textl, 0, 0, 1, 1);
@@ -534,12 +538,45 @@ public class BoxView : Gtk.Box {
         return overlay;
     }
 
+    public void load_items () {
+        int width, height;
+        settings.get ("size", "(ii)", out width, out height);
+        int number_of_locations = 0;
+        model.foreach ((model, path, iter) => {
+            number_of_locations = number_of_locations + 1;
+            return false;
+        });
+        if ((width/number_of_locations) < 272) {
+            width = 272*number_of_locations;
+        }
+        width = ((width-60)/number_of_locations);
+        height = height-100;
+        remove_items ();
+        model.foreach ((model, path, iter) => {
+            Object item_in_list;
+            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+            this.pack_end (get_item_overlay (item_in_list, width, height), true, true, 1);
+            return false;
+        });
+    }
+
+    public void remove_items () {
+        foreach (Gtk.Widget tile in get_children ()) {
+            tile.destroy ();
+        }
+    }
+
+    public void update_time () {
+        remove_items ();
+        load_items ();
+    }
+
     public void add_item (Object item) {
         var store = (Gtk.ListStore) model;
         Gtk.TreeIter i;
         store.append (out i);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
-        this.pack_end (get_item_overlay (item), true, true, 1);
+        load_items ();
     }
 
     public void prepend (Object item) {

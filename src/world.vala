@@ -311,7 +311,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             foreach (var l in locations) {
                 l.tick();
             }
-            content_view.queue_draw ();
+            content_view.box_view.update_time ();
             update_standalone ();
         });
     }
