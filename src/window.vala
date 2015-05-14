@@ -164,7 +164,7 @@ public class Window : Gtk.ApplicationWindow {
             var list2 = ((Gtk.Container) list1.nth_data (0)).get_children ();
             var list3 = ((Gtk.Container) list2.nth_data (0)).get_children ();
             var content_view = (ContentViewWorld) list3.nth_data (1);
-            content_view.window_size_changed ();
+            content_view.box_view.window_size_changed (event.width, event.height);
         }
 
         return base.configure_event (event);

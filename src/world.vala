@@ -295,6 +295,10 @@ public class Face : Gtk.Stack, Clocks.Clock {
             save ();
         });
 
+        content_view.box_view.empty_changed.connect (() => {
+            reset_view ();
+        });
+
         load ();
 
         if (settings.get_boolean ("geolocation")) {
@@ -427,7 +431,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
 
     public void reset_view () {
         standalone_location = null;
-        visible_child = content_view.empty ? empty_view : content_view;
+        visible_child = content_view.box_view.empty ? empty_view : content_view;
     }
 
     public void update_header_bar () {

@@ -447,6 +447,7 @@ private class IconView : Gtk.IconView {
 
 /*---------------------------------------------------------------------------------*/
 public class BoxView : Gtk.Box {
+    public bool empty { get; private set; default = true; }
     public enum Mode {
         NORMAL,
         SELECTION
@@ -459,17 +460,18 @@ public class BoxView : Gtk.Box {
     }
 
 	public Gtk.ListStore model;
-    private GLib.Settings settings;
+    private int width = 0;
+    private int height = 0;
     public BoxView () {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
         this.set_spacing (1);
         ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
-        this.hexpand = false;
-        settings = new Settings ("org.gnome.clocks.state.window");
-        settings.delay ();
+        width = 0;
+        height = 0;
     }
 
     public signal void delete_location (Object item);
+    public signal void empty_changed ();
 
     public Gtk.Overlay get_item_overlay (Object item, int width, int height) {
         string text;
@@ -500,6 +502,12 @@ public class BoxView : Gtk.Box {
                     ((Gtk.ListStore) model).remove (iter);
                     delete_location (item);
                     overlay.destroy ();
+                    Gtk.TreeIter iterat;
+                    model.get_iter_first (out iterat);
+                    if (!((Gtk.ListStore) model).iter_is_valid (iterat)) {
+                        empty = true;
+                        empty_changed ();
+                    }
                     return true;
                 }
                 return false;
@@ -538,26 +546,37 @@ public class BoxView : Gtk.Box {
         return overlay;
     }
 
-    public void load_items () {
-        int width, height;
-        settings.get ("size", "(ii)", out width, out height);
+    public void calculate_tile_size (out int tile_width, out int tile_height) {
         int number_of_locations = 0;
         model.foreach ((model, path, iter) => {
             number_of_locations = number_of_locations + 1;
             return false;
         });
-        if ((width/number_of_locations) < 272) {
-            width = 272*number_of_locations;
+        if (number_of_locations != 0) {
+            if ((width/number_of_locations) < 272) {
+                tile_width = ((272*number_of_locations)-60)/number_of_locations;
+            } else {
+                tile_width = ((width-60)/number_of_locations);
+            }
+            tile_height = height - 100;
+        } else {
+            tile_width = 0;
+            tile_height = 0;
         }
-        width = ((width-60)/number_of_locations);
-        height = height-100;
-        remove_items ();
-        model.foreach ((model, path, iter) => {
-            Object item_in_list;
-            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
-            this.pack_end (get_item_overlay (item_in_list, width, height), true, true, 1);
-            return false;
-        });
+    }
+
+    public void load_items () {
+        int tile_width, tile_height;
+        calculate_tile_size (out tile_width, out tile_height);
+        if (tile_height != 0 && tile_width != 0) {
+            remove_items ();
+            model.foreach ((model, path, iter) => {
+                Object item_in_list;
+                ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+                this.pack_end (get_item_overlay (item_in_list, tile_width, tile_height), true, true, 1);
+                return false;
+            });
+        }
     }
 
     public void remove_items () {
@@ -571,7 +590,20 @@ public class BoxView : Gtk.Box {
         load_items ();
     }
 
+    public void window_size_changed (int width, int height) {
+        if (this.width != width || this.height != height) {
+            this.width = width;
+            this.height = height;
+            remove_items ();
+            load_items ();
+        }
+    }
+
     public void add_item (Object item) {
+        if (empty) {
+            empty = false;
+            empty_changed ();
+        }
         var store = (Gtk.ListStore) model;
         Gtk.TreeIter i;
         store.append (out i);
@@ -580,10 +612,15 @@ public class BoxView : Gtk.Box {
     }
 
     public void prepend (Object item) {
+        if (empty) {
+            empty = false;
+            empty_changed ();
+        }
         var store = (Gtk.ListStore) model;
         Gtk.TreeIter i;
         store.insert (out i, 0);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
+        load_items ();
     }
 }
 
@@ -675,10 +712,6 @@ public class ContentViewWorld : Gtk.Bin {
 
     public void update_header_bar () {
 
-    }
-
-    public void window_size_changed () {
-        //print ("size changed\n");
     }
 
     public delegate int SortFunc(ContentItem item1, ContentItem item2);
