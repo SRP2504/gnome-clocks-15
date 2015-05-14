@@ -447,6 +447,7 @@ private class IconView : Gtk.IconView {
 
 /*---------------------------------------------------------------------------------*/
 public class BoxView : Gtk.Box {
+    public bool empty { get; private set; default = true; }
     public enum Mode {
         NORMAL,
         SELECTION
@@ -459,19 +460,21 @@ public class BoxView : Gtk.Box {
     }
 
 	public Gtk.ListStore model;
-    private GLib.Settings settings;
+    private int width = 0;
+    private int height = 0;
     public BoxView () {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
-        this.set_spacing (1);
+        this.set_spacing (0);
         ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
-        this.hexpand = false;
-        settings = new Settings ("org.gnome.clocks.state.window");
-        settings.delay ();
+        width = 0;
+        height = 0;
     }
 
     public signal void delete_location (Object item);
+    public signal void empty_changed ();
+    public signal void item_activated (Object item);
 
-    public Gtk.Overlay get_item_overlay (Object item, int width, int height) {
+    public Gtk.EventBox get_item_overlay (Object item, int width, int height) {
         string text;
         string subtext;
         Gdk.Pixbuf? pixbuf;
@@ -481,16 +484,16 @@ public class BoxView : Gtk.Box {
         Gtk.Label subtextl = new Gtk.Label (subtext);
         Gtk.Label name = new Gtk.Label (((ContentItem) item).name);
         textl.get_style_context ().add_class ("time-label");
-        //textl.set_line_wrap (true);
-        //subtextl.set_line_wrap (true);
-        //name.set_line_wrap (true);
 
         Gtk.Overlay overlay = new Gtk.Overlay();
-        Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+        Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 
-        Gtk.Image quit = new Gtk.Image.from_stock (Gtk.STOCK_CLOSE, Gtk.IconSize.MENU);
+        Gtk.Image quit = new Gtk.Image.from_icon_name ("window-close-symbolic", Gtk.IconSize.MENU);
         ((Gtk.Widget) quit).set_halign (Gtk.Align.END);
         Gtk.EventBox event_box = new Gtk.EventBox ();
+        event_box.set_border_width (10);
+        event_box.get_style_context ().add_class ("light-stripe");
+        ((Gtk.Container) event_box).hexpand = false;
         ((Gtk.Container) event_box).add (quit);
         event_box.button_press_event.connect (() => {
             model.foreach ((model, path, iter) => {
@@ -500,6 +503,12 @@ public class BoxView : Gtk.Box {
                     ((Gtk.ListStore) model).remove (iter);
                     delete_location (item);
                     overlay.destroy ();
+                    Gtk.TreeIter iterat;
+                    model.get_iter_first (out iterat);
+                    if (!((Gtk.ListStore) model).iter_is_valid (iterat)) {
+                        empty = true;
+                        empty_changed ();
+                    }
                     return true;
                 }
                 return false;
@@ -508,7 +517,7 @@ public class BoxView : Gtk.Box {
             load_items ();
             return false;
         });
-        out_box.pack_start (event_box, false, false, 10);
+        out_box.pack_start (event_box, false, false, 0);
 
         pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
         Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
@@ -530,34 +539,51 @@ public class BoxView : Gtk.Box {
             context.add_class ("dark-stripe");
         }
         ((Gtk.Widget) details_frame).valign = Gtk.Align.CENTER;
-        out_box.pack_start (details_frame, true, true, 1);
+        out_box.pack_start (details_frame, true, true, 0);
         out_box.show_all ();
 
         overlay.add_overlay (out_box);
         overlay.show_all ();
-        return overlay;
+        Gtk.EventBox overlay_event_box = new Gtk.EventBox ();
+        ((Gtk.Container) overlay_event_box).add (overlay);
+        overlay_event_box.button_press_event.connect (() => {
+            item_activated (item);
+            return false;
+        });
+        overlay_event_box.show_all ();
+        return overlay_event_box;
     }
 
-    public void load_items () {
-        int width, height;
-        settings.get ("size", "(ii)", out width, out height);
+    public void calculate_tile_size (out int tile_width, out int tile_height) {
         int number_of_locations = 0;
         model.foreach ((model, path, iter) => {
             number_of_locations = number_of_locations + 1;
             return false;
         });
-        if ((width/number_of_locations) < 272) {
-            width = 272*number_of_locations;
+        if (number_of_locations != 0) {
+            if ((width/number_of_locations) < 272) {
+                tile_width = ((272*number_of_locations))/number_of_locations;
+            } else {
+                tile_width = ((width-60)/number_of_locations);
+            }
+            tile_height = height - 100;
+        } else {
+            tile_width = 0;
+            tile_height = 0;
         }
-        width = ((width-60)/number_of_locations);
-        height = height-100;
-        remove_items ();
-        model.foreach ((model, path, iter) => {
-            Object item_in_list;
-            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
-            this.pack_end (get_item_overlay (item_in_list, width, height), true, true, 1);
-            return false;
-        });
+    }
+
+    public void load_items () {
+        int tile_width, tile_height;
+        calculate_tile_size (out tile_width, out tile_height);
+        if (tile_height > 0 && tile_width > 0) {
+            model.foreach ((model, path, iter) => {
+                Object item_in_list;
+                ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+                this.pack_end (get_item_overlay (item_in_list, tile_width, tile_height), true, true, 0);
+                return false;
+            });
+        }
     }
 
     public void remove_items () {
@@ -571,19 +597,39 @@ public class BoxView : Gtk.Box {
         load_items ();
     }
 
+    public void window_size_changed (int width, int height) {
+        if (this.width != width || this.height != height) {
+            this.width = width;
+            this.height = height;
+            remove_items ();
+            load_items ();
+        }
+    }
+
     public void add_item (Object item) {
+        if (empty) {
+            empty = false;
+            empty_changed ();
+        }
         var store = (Gtk.ListStore) model;
         Gtk.TreeIter i;
         store.append (out i);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
+        remove_items ();
         load_items ();
     }
 
     public void prepend (Object item) {
+        if (empty) {
+            empty = false;
+            empty_changed ();
+        }
         var store = (Gtk.ListStore) model;
         Gtk.TreeIter i;
         store.insert (out i, 0);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
+        remove_items ();
+        load_items ();
     }
 }
 
@@ -591,11 +637,6 @@ public class ContentViewWorld : Gtk.Bin {
     public bool empty { get; private set; default = true; }
 
     public BoxView box_view;
-    private Gtk.Button select_button;
-    private Gtk.Button cancel_button;
-    private GLib.MenuModel selection_menu;
-    private Gtk.MenuButton selection_menubutton;
-    private Gtk.Label selection_menubutton_label;
     private Gtk.Grid grid;
     private Gtk.Button delete_button;
     private HeaderBar? header_bar;
@@ -671,14 +712,6 @@ public class ContentViewWorld : Gtk.Bin {
 
     public void set_header_bar (HeaderBar bar) {
         header_bar = bar;
-    }
-
-    public void update_header_bar () {
-
-    }
-
-    public void window_size_changed () {
-        //print ("size changed\n");
     }
 
     public delegate int SortFunc(ContentItem item1, ContentItem item2);

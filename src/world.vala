@@ -295,6 +295,14 @@ public class Face : Gtk.Stack, Clocks.Clock {
             save ();
         });
 
+        content_view.box_view.empty_changed.connect (() => {
+            reset_view ();
+        });
+
+        content_view.box_view.item_activated.connect ((item) => {
+            show_standalone ((Item) item);
+        });
+
         load ();
 
         if (settings.get_boolean ("geolocation")) {
@@ -427,17 +435,15 @@ public class Face : Gtk.Stack, Clocks.Clock {
 
     public void reset_view () {
         standalone_location = null;
-        visible_child = content_view.empty ? empty_view : content_view;
+        visible_child = content_view.box_view.empty ? empty_view : content_view;
     }
 
     public void update_header_bar () {
         switch (header_bar.mode) {
         case HeaderBar.Mode.NORMAL:
             new_button.show ();
-            content_view.update_header_bar ();
             break;
         case HeaderBar.Mode.SELECTION:
-            content_view.update_header_bar ();
             break;
         case HeaderBar.Mode.STANDALONE:
             header_bar.title = GLib.Markup.escape_text (standalone_location.city_name);
