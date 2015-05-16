@@ -574,7 +574,6 @@ public class BoxView : Gtk.Box {
         int tile_width, tile_height;
         calculate_tile_size (out tile_width, out tile_height);
         if (tile_height != 0 && tile_width != 0) {
-            remove_items ();
             model.foreach ((model, path, iter) => {
                 Object item_in_list;
                 ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
@@ -613,6 +612,7 @@ public class BoxView : Gtk.Box {
         Gtk.TreeIter i;
         store.append (out i);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
+        remove_items ();
         load_items ();
     }
 
@@ -625,6 +625,7 @@ public class BoxView : Gtk.Box {
         Gtk.TreeIter i;
         store.insert (out i, 0);
         store.set (i, Column.SELECTED, false, Column.ITEM, item);
+        remove_items ();
         load_items ();
     }
 }
