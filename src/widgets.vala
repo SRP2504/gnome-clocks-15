@@ -472,8 +472,9 @@ public class BoxView : Gtk.Box {
 
     public signal void delete_location (Object item);
     public signal void empty_changed ();
+    public signal void item_activated (Object item);
 
-    public Gtk.Overlay get_item_overlay (Object item, int width, int height) {
+    public Gtk.EventBox get_item_overlay (Object item, int width, int height) {
         string text;
         string subtext;
         Gdk.Pixbuf? pixbuf;
@@ -483,9 +484,6 @@ public class BoxView : Gtk.Box {
         Gtk.Label subtextl = new Gtk.Label (subtext);
         Gtk.Label name = new Gtk.Label (((ContentItem) item).name);
         textl.get_style_context ().add_class ("time-label");
-        //textl.set_line_wrap (true);
-        //subtextl.set_line_wrap (true);
-        //name.set_line_wrap (true);
 
         Gtk.Overlay overlay = new Gtk.Overlay();
         Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
@@ -543,7 +541,14 @@ public class BoxView : Gtk.Box {
 
         overlay.add_overlay (out_box);
         overlay.show_all ();
-        return overlay;
+        Gtk.EventBox overlay_event_box = new Gtk.EventBox ();
+        ((Gtk.Container) overlay_event_box).add (overlay);
+        overlay_event_box.button_press_event.connect (() => {
+            item_activated (item);
+            return false;
+        });
+        overlay_event_box.show_all ();
+        return overlay_event_box;
     }
 
     public void calculate_tile_size (out int tile_width, out int tile_height) {

@@ -299,6 +299,10 @@ public class Face : Gtk.Stack, Clocks.Clock {
             reset_view ();
         });
 
+        content_view.box_view.item_activated.connect ((item) => {
+            show_standalone ((Item) item);
+        });
+
         load ();
 
         if (settings.get_boolean ("geolocation")) {
