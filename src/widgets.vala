@@ -464,7 +464,7 @@ public class BoxView : Gtk.Box {
     private int height = 0;
     public BoxView () {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (bool), typeof (ContentItem));
-        this.set_spacing (1);
+        this.set_spacing (0);
         ((Gtk.Widget) this).set_valign (Gtk.Align.CENTER);
         width = 0;
         height = 0;
@@ -486,11 +486,13 @@ public class BoxView : Gtk.Box {
         textl.get_style_context ().add_class ("time-label");
 
         Gtk.Overlay overlay = new Gtk.Overlay();
-        Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 1);
+        Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 
         Gtk.Image quit = new Gtk.Image.from_stock (Gtk.STOCK_CLOSE, Gtk.IconSize.MENU);
         ((Gtk.Widget) quit).set_halign (Gtk.Align.END);
         Gtk.EventBox event_box = new Gtk.EventBox ();
+        event_box.set_border_width (10);
+        event_box.get_style_context ().add_class ("light-stripe");
         ((Gtk.Container) event_box).add (quit);
         event_box.button_press_event.connect (() => {
             model.foreach ((model, path, iter) => {
@@ -514,7 +516,7 @@ public class BoxView : Gtk.Box {
             load_items ();
             return false;
         });
-        out_box.pack_start (event_box, false, false, 10);
+        out_box.pack_start (event_box, false, false, 0);
 
         pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
         Gtk.Image weather_image = new Gtk.Image.from_pixbuf (pixbuf);
@@ -536,7 +538,7 @@ public class BoxView : Gtk.Box {
             context.add_class ("dark-stripe");
         }
         ((Gtk.Widget) details_frame).valign = Gtk.Align.CENTER;
-        out_box.pack_start (details_frame, true, true, 1);
+        out_box.pack_start (details_frame, true, true, 0);
         out_box.show_all ();
 
         overlay.add_overlay (out_box);
@@ -559,7 +561,7 @@ public class BoxView : Gtk.Box {
         });
         if (number_of_locations != 0) {
             if ((width/number_of_locations) < 272) {
-                tile_width = ((272*number_of_locations)-60)/number_of_locations;
+                tile_width = ((272*number_of_locations))/number_of_locations;
             } else {
                 tile_width = ((width-60)/number_of_locations);
             }
@@ -573,11 +575,11 @@ public class BoxView : Gtk.Box {
     public void load_items () {
         int tile_width, tile_height;
         calculate_tile_size (out tile_width, out tile_height);
-        if (tile_height != 0 && tile_width != 0) {
+        if (tile_height > 0 && tile_width > 0) {
             model.foreach ((model, path, iter) => {
                 Object item_in_list;
                 ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
-                this.pack_end (get_item_overlay (item_in_list, tile_width, tile_height), true, true, 1);
+                this.pack_end (get_item_overlay (item_in_list, tile_width, tile_height), true, true, 0);
                 return false;
             });
         }
