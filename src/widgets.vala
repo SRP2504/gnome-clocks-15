@@ -491,8 +491,11 @@ public class BoxView : Gtk.Box {
         Gtk.Image quit = new Gtk.Image.from_stock (Gtk.STOCK_CLOSE, Gtk.IconSize.MENU);
         ((Gtk.Widget) quit).set_halign (Gtk.Align.END);
         Gtk.EventBox event_box = new Gtk.EventBox ();
+        ((Gtk.Container) out_box).hexpand = false;
+        quit.hexpand = false;
         event_box.set_border_width (10);
         event_box.get_style_context ().add_class ("light-stripe");
+        ((Gtk.Container) event_box).hexpand = false;
         ((Gtk.Container) event_box).add (quit);
         event_box.button_press_event.connect (() => {
             model.foreach ((model, path, iter) => {
