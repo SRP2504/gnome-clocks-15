@@ -442,10 +442,8 @@ public class Face : Gtk.Stack, Clocks.Clock {
         switch (header_bar.mode) {
         case HeaderBar.Mode.NORMAL:
             new_button.show ();
-            content_view.update_header_bar ();
             break;
         case HeaderBar.Mode.SELECTION:
-            content_view.update_header_bar ();
             break;
         case HeaderBar.Mode.STANDALONE:
             header_bar.title = GLib.Markup.escape_text (standalone_location.city_name);

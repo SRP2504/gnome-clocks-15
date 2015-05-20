@@ -488,11 +488,9 @@ public class BoxView : Gtk.Box {
         Gtk.Overlay overlay = new Gtk.Overlay();
         Gtk.Box out_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 
-        Gtk.Image quit = new Gtk.Image.from_stock (Gtk.STOCK_CLOSE, Gtk.IconSize.MENU);
+        Gtk.Image quit = new Gtk.Image.from_icon_name ("window-close-symbolic", Gtk.IconSize.MENU);
         ((Gtk.Widget) quit).set_halign (Gtk.Align.END);
         Gtk.EventBox event_box = new Gtk.EventBox ();
-        ((Gtk.Container) out_box).hexpand = false;
-        quit.hexpand = false;
         event_box.set_border_width (10);
         event_box.get_style_context ().add_class ("light-stripe");
         ((Gtk.Container) event_box).hexpand = false;
@@ -639,11 +637,6 @@ public class ContentViewWorld : Gtk.Bin {
     public bool empty { get; private set; default = true; }
 
     public BoxView box_view;
-    private Gtk.Button select_button;
-    private Gtk.Button cancel_button;
-    private GLib.MenuModel selection_menu;
-    private Gtk.MenuButton selection_menubutton;
-    private Gtk.Label selection_menubutton_label;
     private Gtk.Grid grid;
     private Gtk.Button delete_button;
     private HeaderBar? header_bar;
@@ -719,10 +712,6 @@ public class ContentViewWorld : Gtk.Bin {
 
     public void set_header_bar (HeaderBar bar) {
         header_bar = bar;
-    }
-
-    public void update_header_bar () {
-
     }
 
     public delegate int SortFunc(ContentItem item1, ContentItem item2);
