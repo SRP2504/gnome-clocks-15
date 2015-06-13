@@ -725,6 +725,28 @@ public class ContentView : Gtk.Bin {
     }
 }
 
+[GtkTemplate (ui = "/org/gnome/clocks/ui/locationtile.ui")]
+private class LocationTile : Gtk.EventBox {
+    [GtkChild]
+    public Gtk.Image weather_image;
+    [GtkChild]
+    public Gtk.EventBox close_event_box;
+    [GtkChild]
+    public Gtk.Label textl;
+    [GtkChild]
+    public Gtk.Label subtextl;
+    [GtkChild]
+    public Gtk.Label namel;
+
+    public LocationTile (string text, string subtext, string name, Gdk.Pixbuf weather_pixbuf) {
+        textl = new Gtk.Label (text);
+        subtextl = new Gtk.Label (subtext);
+        namel = new Gtk.Label (name);
+        weather_image = new Gtk.Image.from_pixbuf (weather_pixbuf);
+        close_event_box = new Gtk.EventBox ();
+    }
+}
+
 public class ContentViewWorld : Gtk.Bin {
     public bool empty { get; private set; default = true; }
 
@@ -769,19 +791,6 @@ public class ContentViewWorld : Gtk.Bin {
     public void prepend (ContentItem item) {
         icon_view.prepend (item);
         update_props_on_insert (item);
-    }
-
-    private void update_props_on_remove () {
-        Gtk.TreeIter iter;
-
-        var local_empty = true;
-        if (icon_view.model.get_iter_first (out iter)) {
-            local_empty = false;
-        }
-
-        if (local_empty != empty) {
-            empty = local_empty;
-        }
     }
 
     private void update_props_on_insert (ContentItem item) {
