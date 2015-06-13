@@ -725,6 +725,92 @@ public class ContentView : Gtk.Bin {
     }
 }
 
+public class ContentViewWorld : Gtk.Bin {
+    public bool empty { get; private set; default = true; }
+
+    private IconView icon_view;
+    private Gtk.Grid grid;
+    private HeaderBar? header_bar;
+
+    construct {
+        icon_view = new IconView ();
+
+        var scrolled_window = new Gtk.ScrolledWindow (null, null);
+        scrolled_window.add (icon_view);
+        scrolled_window.hexpand = true;
+        scrolled_window.vexpand = true;
+        scrolled_window.halign = Gtk.Align.FILL;
+        scrolled_window.valign = Gtk.Align.FILL;
+
+        grid = new Gtk.Grid ();
+        grid.attach (scrolled_window, 0, 0, 1, 1);
+
+        icon_view.item_activated.connect ((path) => {
+            var store = (Gtk.ListStore) icon_view.model;
+            Gtk.TreeIter i;
+            if (store.get_iter (out i, path)) {
+                Object item;
+                store.get (i, IconView.Column.ITEM, out item);
+                item_activated ((ContentItem) item);
+            }
+        });
+
+        add (grid);
+        grid.show_all ();
+    }
+
+    public signal void item_activated (ContentItem item);
+
+    public void add_item (ContentItem item) {
+        icon_view.add_item (item);
+        update_props_on_insert (item);
+    }
+
+    public void prepend (ContentItem item) {
+        icon_view.prepend (item);
+        update_props_on_insert (item);
+    }
+
+    private void update_props_on_remove () {
+        Gtk.TreeIter iter;
+
+        var local_empty = true;
+        if (icon_view.model.get_iter_first (out iter)) {
+            local_empty = false;
+        }
+
+        if (local_empty != empty) {
+            empty = local_empty;
+        }
+    }
+
+    private void update_props_on_insert (ContentItem item) {
+        if (empty) {
+            empty = false;
+        }
+    }
+
+    public void set_header_bar (HeaderBar bar) {
+        header_bar = bar;
+    }
+
+    public delegate int SortFunc(ContentItem item1, ContentItem item2);
+
+    public void set_sorting(Gtk.SortType sort_type, SortFunc sort_func) {
+        var sortable = icon_view.get_model () as Gtk.TreeSortable;
+        sortable.set_sort_column_id (1, sort_type);
+        sortable.set_sort_func (1, (model, iter1, iter2) => {
+            ContentItem item1;
+            ContentItem item2;
+
+            model.get (iter1, IconView.Column.ITEM, out item1);
+            model.get (iter2, IconView.Column.ITEM, out item2);
+
+            return sort_func (item1, item2);
+        });
+    }
+}
+
 public class AmPmToggleButton : Gtk.Button {
     public enum AmPm {
         AM,
