@@ -5,6 +5,7 @@
     <property name="visible">True</property>
     <child>
         <object class="GtkOverlay" id="outer_overlay">
+          <property name="visible">True</property>	
           <child>
             <object class="GtkImage" id="weather_image">
               <property name="visible">True</property>
@@ -15,17 +16,26 @@
             <object class="GtkBox" id="outer_box">
               <property name="visible">True</property>
               <property name="orientation">vertical</property>
+              <property name="homogeneous">False</property>
               <child>
                 <object class="GtkEventBox" id="close_event_box">
                   <property name="visible">True</property>
+                  <property name="hexpand">False</property>
+                  <property name="halign">end</property>
                   <child>
                     <object class="GtkImage" id="quit_image">
                       <property name="visible">True</property>
                       <property name="icon-name">window-close-symbolic</property>
+                      <property name="halign">end</property>
+                      <property name="icon-size">1</property>
                     </object>
-                  </child>  
+                  </child>
+                  <style>
+                    <class name="close-button-box"/>
+                  </style>
                 </object>
                 <packing>
+                  <property name="pack-type">start</property>	
                   <property name="expand">False</property>
                   <property name="fill">True</property>
                   <property name="position">0</property>
@@ -34,12 +44,17 @@
               <child>
                 <object class="GtkFrame" id="details_frame">
                   <property name="visible">True</property>
+                  <property name="valign">center</property>
                   <child>
                     <object class="GtkGrid" id="details_grid">
                       <property name="visible">True</property>
+                      <property name="halign">center</property>
                       <child>
                         <object class="GtkLabel" id="textl">
                           <property name="visible">True</property>
+                          <style>
+                            <class name="time-label"/>
+                          </style>
                         </object>
                         <packing>
                           <property name="left_attach">0</property>
@@ -74,7 +89,8 @@
                   </child>
                 </object>
                 <packing>
-                  <property name="expand">False</property>
+                  <property name="pack-type">start</property>	
+                  <property name="expand">True</property>
                   <property name="fill">True</property>
                   <property name="position">1</property>
                 </packing>

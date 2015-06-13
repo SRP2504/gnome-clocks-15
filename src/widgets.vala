@@ -730,35 +730,49 @@ private class LocationTile : Gtk.EventBox {
     [GtkChild]
     public Gtk.Image weather_image;
     [GtkChild]
-    public Gtk.EventBox close_event_box;
-    [GtkChild]
     public Gtk.Label textl;
     [GtkChild]
     public Gtk.Label subtextl;
     [GtkChild]
     public Gtk.Label namel;
+    [GtkChild]
+    public Gtk.EventBox close_event_box;
+    [GtkChild]
+    public Gtk.Frame details_frame;
 
-    public LocationTile (string text, string subtext, string name, Gdk.Pixbuf weather_pixbuf) {
-        textl = new Gtk.Label (text);
-        subtextl = new Gtk.Label (subtext);
-        namel = new Gtk.Label (name);
-        weather_image = new Gtk.Image.from_pixbuf (weather_pixbuf);
-        close_event_box = new Gtk.EventBox ();
+    public LocationTile (string? text, string? subtext, string? name, Gdk.Pixbuf? weather_pixbuf) {
+        textl.label = text;
+        subtextl.label = subtext;
+        namel.label = name;
+        weather_image.set_from_pixbuf (weather_pixbuf);
     }
 }
 
 public class ContentViewWorld : Gtk.Bin {
     public bool empty { get; private set; default = true; }
 
-    private IconView icon_view;
+    public enum Column {
+        ITEM,
+        COLUMNS
+    }
+
     private Gtk.Grid grid;
     private HeaderBar? header_bar;
+    private Gtk.Box box_view;
+    private Gtk.ListStore model;
+    private int window_width;
+    private int window_height;
 
     construct {
-        icon_view = new IconView ();
+        box_view = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
+        ((Gtk.Widget) box_view).set_valign (Gtk.Align.CENTER);
+        box_view.show_all ();
+        model = new Gtk.ListStore (Column.COLUMNS, typeof (ContentItem));
+        window_width = 0;
+        window_height = 0;
 
         var scrolled_window = new Gtk.ScrolledWindow (null, null);
-        scrolled_window.add (icon_view);
+        scrolled_window.add (box_view);
         scrolled_window.hexpand = true;
         scrolled_window.vexpand = true;
         scrolled_window.halign = Gtk.Align.FILL;
@@ -767,29 +781,139 @@ public class ContentViewWorld : Gtk.Bin {
         grid = new Gtk.Grid ();
         grid.attach (scrolled_window, 0, 0, 1, 1);
 
-        icon_view.item_activated.connect ((path) => {
-            var store = (Gtk.ListStore) icon_view.model;
-            Gtk.TreeIter i;
-            if (store.get_iter (out i, path)) {
-                Object item;
-                store.get (i, IconView.Column.ITEM, out item);
-                item_activated ((ContentItem) item);
-            }
-        });
-
         add (grid);
         grid.show_all ();
+
+        this.size_allocate.connect (() => {
+            int width = this.get_allocated_width ();
+            int height = this.get_allocated_height ();
+            if (window_width != width || window_height != height ) {
+                window_width = width;
+                window_height = height;
+                remove_items ();
+                load_items ();
+            }
+        });
     }
 
     public signal void item_activated (ContentItem item);
 
+    public virtual signal void delete_location (ContentItem item) {
+        model.foreach ((model, path, iter) => {
+            Object item_in_list;
+            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+            if (item_in_list == item) {
+                ((Gtk.ListStore) model).remove (iter);
+                return true;
+            }
+            return false;
+        });
+        remove_items ();
+        load_items ();
+        update_props_on_remove ();
+    }
+
+    private void update_props_on_remove () {
+        Gtk.TreeIter iter;
+
+        var local_empty = true;
+        if (model.get_iter_first (out iter)) {
+            local_empty = false;
+        }
+
+        if (local_empty != empty) {
+            empty = local_empty;
+        }
+    }
+
+    private void update_location_tile_size (out int tile_width, out int tile_height) {
+        int number_of_locations = 0;
+        model.foreach ((model, path, iter) => {
+            number_of_locations = number_of_locations + 1;
+            return false;
+        });
+
+        if (number_of_locations != 0) {
+            if ((window_width/number_of_locations) < 272) {
+                tile_width = 272;
+            } else {
+                tile_width = (window_width/number_of_locations);
+            }
+            tile_height = window_height;
+        } else {
+            tile_width = 0;
+            tile_height = 0;
+        }
+    }
+
+    private LocationTile get_location_tile (Object item, int width, int height) {
+        string text;
+        string subtext;
+        Gdk.Pixbuf? pixbuf;
+        string css_class;
+        string name = ((ContentItem) item).name;
+        ((ContentItem)item).get_thumb_properties (out text, out subtext, out pixbuf, out css_class);
+
+        pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
+        LocationTile tile = new LocationTile (text, subtext, name, pixbuf);
+
+        var context = tile.details_frame.get_style_context ();
+        if (css_class == "light") {
+            context.add_class ("light-stripe");
+        } else {
+            context.add_class ("dark-stripe");
+        }
+
+        tile.close_event_box.button_press_event.connect (() => {
+            tile.destroy ();
+            delete_location ((ContentItem) item);
+            return false;
+        });
+
+        tile.button_press_event.connect (() => {
+            item_activated ((ContentItem) item);
+            return false;
+        });
+
+        return tile;
+    }
+
+    private void load_items () {
+        int tile_width, tile_height;
+        update_location_tile_size (out tile_width, out tile_height);
+        if (tile_height > 0 && tile_width > 0) {
+            model.foreach ((model, path, iter) => {
+                Object item_in_list;
+                ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+                box_view.pack_end (get_location_tile (item_in_list, tile_width, tile_height), true, true, 0);
+                return false;
+            });
+        }
+    }
+
+    private void remove_items () {
+        foreach (Gtk.Widget location_tile in box_view.get_children ()) {
+            location_tile.destroy ();
+        }
+    }
+
     public void add_item (ContentItem item) {
-        icon_view.add_item (item);
+        var store = (Gtk.ListStore) model;
+        Gtk.TreeIter i;
+        store.append (out i);
+        store.set (i, Column.ITEM, item);
+        remove_items ();
+        load_items ();
         update_props_on_insert (item);
     }
 
     public void prepend (ContentItem item) {
-        icon_view.prepend (item);
+        var store = (Gtk.ListStore) model;
+        Gtk.TreeIter i;
+        store.append (out i);
+        store.set (i, Column.ITEM, item);
+        remove_items ();
+        load_items ();
         update_props_on_insert (item);
     }
 
@@ -799,6 +923,11 @@ public class ContentViewWorld : Gtk.Bin {
         }
     }
 
+    public void update_time () {
+        remove_items ();
+        load_items ();
+    }
+
     public void set_header_bar (HeaderBar bar) {
         header_bar = bar;
     }
@@ -806,14 +935,14 @@ public class ContentViewWorld : Gtk.Bin {
     public delegate int SortFunc(ContentItem item1, ContentItem item2);
 
     public void set_sorting(Gtk.SortType sort_type, SortFunc sort_func) {
-        var sortable = icon_view.get_model () as Gtk.TreeSortable;
-        sortable.set_sort_column_id (1, sort_type);
-        sortable.set_sort_func (1, (model, iter1, iter2) => {
+        var sortable = model as Gtk.TreeSortable;
+        sortable.set_sort_column_id (0, sort_type);
+        sortable.set_sort_func (0, (model, iter1, iter2) => {
             ContentItem item1;
             ContentItem item2;
 
-            model.get (iter1, IconView.Column.ITEM, out item1);
-            model.get (iter2, IconView.Column.ITEM, out item2);
+            model.get (iter1, Column.ITEM, out item1);
+            model.get (iter2, Column.ITEM, out item2);
 
             return sort_func (item1, item2);
         });

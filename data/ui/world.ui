@@ -48,6 +48,7 @@
     <child>
       <object class="ClocksContentViewWorld" id="content_view">
         <property name="visible">True</property>
+        <signal name="delete-location" handler="delete_location" swapped="no"/>
         <signal name="item-activated" handler="item_activated" swapped="no"/>
         <signal name="notify::empty" handler="empty_changed" swapped="no"/>
       </object>

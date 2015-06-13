@@ -306,7 +306,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             foreach (var l in locations) {
                 l.tick();
             }
-            content_view.queue_draw ();
+            content_view.update_time ();
             update_standalone ();
         });
     }
@@ -314,6 +314,12 @@ public class Face : Gtk.Stack, Clocks.Clock {
     [GtkCallback]
     private void item_activated (ContentItem item) {
         show_standalone ((Item) item);
+    }
+
+    [GtkCallback]
+    private void delete_location (ContentItem item) {
+        locations.remove ((Item) item);
+        save ();
     }
 
     [GtkCallback]
