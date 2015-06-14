@@ -730,6 +730,8 @@ private class LocationTile : Gtk.EventBox {
     [GtkChild]
     public Gtk.Image weather_image;
     [GtkChild]
+    public Gtk.Image geolocation_symbol;
+    [GtkChild]
     public Gtk.Label textl;
     [GtkChild]
     public Gtk.Label subtextl;
@@ -740,11 +742,14 @@ private class LocationTile : Gtk.EventBox {
     [GtkChild]
     public Gtk.Frame details_frame;
 
-    public LocationTile (string? text, string? subtext, string? name, Gdk.Pixbuf? weather_pixbuf) {
+    public LocationTile (string? text, string? subtext, string? name, Gdk.Pixbuf? weather_pixbuf, bool geolocation) {
         textl.label = text;
         subtextl.label = subtext;
         namel.label = name;
         weather_image.set_from_pixbuf (weather_pixbuf);
+        if (geolocation) {
+            geolocation_symbol.show ();
+        }
     }
 }
 
@@ -853,7 +858,7 @@ public class ContentViewWorld : Gtk.Bin {
         }
     }
 
-    private LocationTile get_location_tile (Object item, int width, int height) {
+    private LocationTile get_location_tile (Object item, int width, int height, bool geolocation) {
         string text;
         string subtext;
         Gdk.Pixbuf? pixbuf;
@@ -862,7 +867,7 @@ public class ContentViewWorld : Gtk.Bin {
         ((ContentItem)item).get_thumb_properties (out text, out subtext, out pixbuf, out css_class);
 
         pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
-        LocationTile tile = new LocationTile (text, subtext, name, pixbuf);
+        LocationTile tile = new LocationTile (text, subtext, name, pixbuf, geolocation);
 
         var context = tile.details_frame.get_style_context ();
         if (css_class == "light") {
@@ -885,13 +890,13 @@ public class ContentViewWorld : Gtk.Bin {
         return tile;
     }
 
-    public void add_item (ContentItem item) {
+    public void add_item (ContentItem item, bool geolocation) {
         var store = (Gtk.ListStore) model;
         Gtk.TreeIter i;
         store.append (out i);
         store.set (i, Column.ITEM, item);
         int position = model.get_path (i).get_indices ()[0];
-        LocationTile tile = get_location_tile (item, 300, 800);
+        LocationTile tile = get_location_tile (item, 300, 800, geolocation);
         box_view.pack_start (tile, true, true, 0);
         box_view.reorder_child (tile, position);
         update_location_tile_size ();

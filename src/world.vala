@@ -356,7 +356,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             Item? location = Item.deserialize (l);
             if (location != null) {
                 locations.prepend (location);
-                content_view.add_item (location);
+                content_view.add_item (location, false);
             }
         }
         locations.reverse ();
@@ -388,7 +388,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             item.selectable = false;
             item.title_icon = "find-location-symbolic";
             locations.append (item);
-            content_view.add_item (item);
+            content_view.add_item (item, true);
         });
 
         yield geo_info.seek ();
@@ -396,7 +396,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
 
     private void add_location_item (Item item) {
         locations.append (item);
-        content_view.add_item (item);
+        content_view.add_item (item, false);
         save ();
     }
 
