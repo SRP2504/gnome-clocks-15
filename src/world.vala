@@ -388,7 +388,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             item.selectable = false;
             item.title_icon = "find-location-symbolic";
             locations.append (item);
-            content_view.prepend (item);
+            content_view.add_item (item);
         });
 
         yield geo_info.seek ();

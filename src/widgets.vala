@@ -790,8 +790,7 @@ public class ContentViewWorld : Gtk.Bin {
             if (window_width != width || window_height != height ) {
                 window_width = width;
                 window_height = height;
-                remove_items ();
-                load_items ();
+                update_location_tile_size ();
             }
         });
     }
@@ -808,8 +807,7 @@ public class ContentViewWorld : Gtk.Bin {
             }
             return false;
         });
-        remove_items ();
-        load_items ();
+        update_location_tile_size ();
         update_props_on_remove ();
     }
 
@@ -826,12 +824,8 @@ public class ContentViewWorld : Gtk.Bin {
         }
     }
 
-    private void update_location_tile_size (out int tile_width, out int tile_height) {
-        int number_of_locations = 0;
-        model.foreach ((model, path, iter) => {
-            number_of_locations = number_of_locations + 1;
-            return false;
-        });
+    private void calculate_location_tile_size (out int tile_width, out int tile_height) {
+        int number_of_locations = model.iter_n_children (null);
 
         if (number_of_locations != 0) {
             if ((window_width/number_of_locations) < 272) {
@@ -843,6 +837,19 @@ public class ContentViewWorld : Gtk.Bin {
         } else {
             tile_width = 0;
             tile_height = 0;
+        }
+    }
+
+    public void update_location_tile_size () {
+        foreach (Gtk.Widget tile in box_view.get_children ()) {
+            LocationTile location_tile = (LocationTile) tile;
+            Gdk.Pixbuf? pixbuf = location_tile.weather_image.get_pixbuf ();
+            int width, height;
+            calculate_location_tile_size (out width, out height);
+            if (width > 0 && height > 0) {
+                pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
+                location_tile.weather_image.set_from_pixbuf (pixbuf);
+            }
         }
     }
 
@@ -878,54 +885,37 @@ public class ContentViewWorld : Gtk.Bin {
         return tile;
     }
 
-    private void load_items () {
-        int tile_width, tile_height;
-        update_location_tile_size (out tile_width, out tile_height);
-        if (tile_height > 0 && tile_width > 0) {
-            model.foreach ((model, path, iter) => {
-                Object item_in_list;
-                ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
-                box_view.pack_end (get_location_tile (item_in_list, tile_width, tile_height), true, true, 0);
-                return false;
-            });
-        }
-    }
-
-    private void remove_items () {
-        foreach (Gtk.Widget location_tile in box_view.get_children ()) {
-            location_tile.destroy ();
-        }
-    }
-
     public void add_item (ContentItem item) {
         var store = (Gtk.ListStore) model;
         Gtk.TreeIter i;
         store.append (out i);
         store.set (i, Column.ITEM, item);
-        remove_items ();
-        load_items ();
-        update_props_on_insert (item);
+        int position = model.get_path (i).get_indices ()[0];
+        LocationTile tile = get_location_tile (item, 300, 800);
+        box_view.pack_start (tile, true, true, 0);
+        box_view.reorder_child (tile, position);
+        update_location_tile_size ();
+        update_props_on_insert ();
     }
 
-    public void prepend (ContentItem item) {
-        var store = (Gtk.ListStore) model;
-        Gtk.TreeIter i;
-        store.append (out i);
-        store.set (i, Column.ITEM, item);
-        remove_items ();
-        load_items ();
-        update_props_on_insert (item);
-    }
-
-    private void update_props_on_insert (ContentItem item) {
+    private void update_props_on_insert () {
         if (empty) {
             empty = false;
         }
     }
 
     public void update_time () {
-        remove_items ();
-        load_items ();
+        int index = 0;
+        model.foreach ((model, path, iter) => {
+            ContentItem item_in_list;
+            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+            var tile = (LocationTile) box_view.get_children ().nth_data (index);
+            string textl;
+            item_in_list.get_thumb_properties (out textl, null, null, null);
+            tile.textl.set_label (textl);
+            index++;
+            return false;
+        });
     }
 
     public void set_header_bar (HeaderBar bar) {
