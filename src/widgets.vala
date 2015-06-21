@@ -759,6 +759,192 @@ private class LocationTile : Gtk.EventBox {
     }
 }
 
+public class ContentViewWorld : Gtk.Bin {
+    public bool empty { get; private set; default = true; }
+
+    public enum Column {
+        ITEM,
+        COLUMNS
+    }
+
+    private Gtk.Grid grid;
+    private HeaderBar? header_bar;
+    private Gtk.Box box_view;
+    private Gtk.ListStore model;
+    private int window_width;
+    private int window_height;
+    private const int MIN_TILE_WIDTH = 272;
+
+    construct {
+        box_view = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
+        ((Gtk.Widget) box_view).set_valign (Gtk.Align.CENTER);
+        box_view.show_all ();
+        model = new Gtk.ListStore (Column.COLUMNS, typeof (ContentItem));
+        window_width = 0;
+        window_height = 0;
+
+        var scrolled_window = new Gtk.ScrolledWindow (null, null);
+        scrolled_window.add (box_view);
+        scrolled_window.hexpand = true;
+        scrolled_window.vexpand = true;
+        scrolled_window.halign = Gtk.Align.FILL;
+        scrolled_window.valign = Gtk.Align.FILL;
+
+        grid = new Gtk.Grid ();
+        grid.attach (scrolled_window, 0, 0, 1, 1);
+
+        add (grid);
+        grid.show_all ();
+
+        this.size_allocate.connect (() => {
+            int width = this.get_allocated_width ();
+            int height = this.get_allocated_height ();
+            if (window_width != width || window_height != height ) {
+                window_width = width;
+                window_height = height;
+                update_location_tile_size ();
+            }
+        });
+    }
+
+    public signal void item_activated (ContentItem item);
+
+    public virtual signal void delete_location (ContentItem item) {
+        model.foreach ((model, path, iter) => {
+            Object item_in_list;
+            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+            if (item_in_list == item) {
+                ((Gtk.ListStore) model).remove (iter);
+                return true;
+            }
+            return false;
+        });
+        update_location_tile_size ();
+        update_props_on_remove ();
+    }
+
+    private void update_props_on_remove () {
+        Gtk.TreeIter iter;
+
+        var local_empty = true;
+        if (model.get_iter_first (out iter)) {
+            local_empty = false;
+        }
+
+        if (local_empty != empty) {
+            empty = local_empty;
+        }
+    }
+
+    private void calculate_location_tile_size (out int tile_width, out int tile_height) {
+        int number_of_locations = model.iter_n_children (null);
+
+        if (number_of_locations != 0) {
+            tile_width = (int) Math.fmax (MIN_TILE_WIDTH, window_width / number_of_locations);
+            tile_height = window_height;
+        } else {
+            tile_width = 0;
+            tile_height = 0;
+        }
+    }
+
+    public void update_location_tile_size () {
+        foreach (Gtk.Widget tile in box_view.get_children ()) {
+            LocationTile location_tile = (LocationTile) tile;
+            Gdk.Pixbuf? pixbuf = location_tile.weather_image.get_pixbuf ();
+            int width, height;
+            calculate_location_tile_size (out width, out height);
+            if (width > 0 && height > 0) {
+                pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
+                location_tile.weather_image.set_from_pixbuf (pixbuf);
+            }
+        }
+    }
+
+    private LocationTile get_location_tile (Object item, int width, int height, bool geolocation) {
+        string text;
+        string subtext;
+        Gdk.Pixbuf? pixbuf;
+        string css_class;
+        string city_name = ((Clocks.World.Item) item).location.get_city_name ();
+        string country_name = ((Clocks.World.Item) item).location.get_country_name ();
+        ((ContentItem)item).get_thumb_properties (out text, out subtext, out pixbuf, out css_class);
+        subtext = ((Clocks.World.Item) item).get_hours_difference ();
+
+        pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
+        LocationTile tile = new LocationTile (text, subtext, city_name, country_name, pixbuf, geolocation);
+
+        var context = tile.details_frame.get_style_context ();
+        context.add_class (css_class);
+
+        tile.close_event_box.button_press_event.connect (() => {
+            tile.destroy ();
+            delete_location ((ContentItem) item);
+            return false;
+        });
+
+        tile.button_press_event.connect (() => {
+            item_activated ((ContentItem) item);
+            return false;
+        });
+
+        return tile;
+    }
+
+    public void add_item (ContentItem item, bool geolocation) {
+        var store = (Gtk.ListStore) model;
+        Gtk.TreeIter i;
+        store.append (out i);
+        store.set (i, Column.ITEM, item);
+        int position = model.get_path (i).get_indices ()[0];
+        LocationTile tile = get_location_tile (item, 300, 800, geolocation);
+        box_view.pack_start (tile, true, true, 0);
+        box_view.reorder_child (tile, position);
+        update_location_tile_size ();
+        update_props_on_insert ();
+    }
+
+    private void update_props_on_insert () {
+        if (empty) {
+            empty = false;
+        }
+    }
+
+    public void update_time () {
+        int index = 0;
+        model.foreach ((model, path, iter) => {
+            ContentItem item_in_list;
+            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+            var tile = (LocationTile) box_view.get_children ().nth_data (index);
+            string textl;
+            item_in_list.get_thumb_properties (out textl, null, null, null);
+            tile.textl.set_label (textl);
+            index++;
+            return false;
+        });
+    }
+
+    public void set_header_bar (HeaderBar bar) {
+        header_bar = bar;
+    }
+
+    public delegate int SortFunc(ContentItem item1, ContentItem item2);
+
+    public void set_sorting(Gtk.SortType sort_type, SortFunc sort_func) {
+        var sortable = model as Gtk.TreeSortable;
+        sortable.set_sort_column_id (0, sort_type);
+        sortable.set_sort_func (0, (model, iter1, iter2) => {
+            ContentItem item1;
+            ContentItem item2;
+
+            model.get (iter1, Column.ITEM, out item1);
+            model.get (iter2, Column.ITEM, out item2);
+
+            return sort_func (item1, item2);
+        });
+    }
+}
+
 public class AmPmToggleButton : Gtk.Button {
     public enum AmPm {
         AM,

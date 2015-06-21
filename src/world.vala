@@ -113,6 +113,22 @@ public class Item : Object, ContentItem {
         }
     }
 
+    public string? get_hours_difference () {
+        long diff = ((long) local_time.get_utc_offset ()) - ((long) date_time.get_utc_offset ());
+        double hours = (double) (diff / 1000.0 / 1000.0 / 60.0 / 60.0);
+        string result;
+        if (hours < 0.0) {
+            hours = hours * (-1.0);
+            result = _("%.1f hours ahead".printf (hours));
+            return result;
+        } else if (hours > 0.0) {
+            result = _("%.1f hours behind".printf (hours));
+            return result;
+        } else {
+            return _("No time difference");
+        }
+    }
+
     private string _name;
     private GLib.TimeZone time_zone;
     private GLib.DateTime local_time;
@@ -148,11 +164,10 @@ public class Item : Object, ContentItem {
         subtext = day_label;
         if (is_daytime) {
             pixbuf = day_pixbuf;
-            css_class = "light";
         } else {
             pixbuf = night_pixbuf;
-            css_class = "dark";
         }
+        css_class = "stripe";
     }
 
     public void serialize (GLib.VariantBuilder builder) {
@@ -236,7 +251,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
     private Gdk.Pixbuf? night_pixbuf;
     private Item standalone_location;
     [GtkChild]
-    private ContentView content_view;
+    private ContentViewWorld content_view;
     [GtkChild]
     private Gtk.Widget empty_view;
     [GtkChild]
@@ -306,7 +321,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             foreach (var l in locations) {
                 l.tick();
             }
-            content_view.queue_draw ();
+            content_view.update_time ();
             update_standalone ();
         });
     }
@@ -317,10 +332,8 @@ public class Face : Gtk.Stack, Clocks.Clock {
     }
 
     [GtkCallback]
-    private void delete_selected () {
-        foreach (var i in content_view.get_selected_items ()) {
-            locations.remove ((Item) i);
-        }
+    private void delete_location (ContentItem item) {
+        locations.remove ((Item) item);
         save ();
     }
 
@@ -358,7 +371,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             Item? location = Item.deserialize (l);
             if (location != null) {
                 locations.prepend (location);
-                content_view.add_item (location);
+                content_view.add_item (location, false);
             }
         }
         locations.reverse ();
@@ -390,7 +403,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
             item.selectable = false;
             item.title_icon = "find-location-symbolic";
             locations.append (item);
-            content_view.prepend (item);
+            content_view.add_item (item, true);
         });
 
         yield geo_info.seek ();
@@ -398,7 +411,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
 
     private void add_location_item (Item item) {
         locations.append (item);
-        content_view.add_item (item);
+        content_view.add_item (item, false);
         save ();
     }
 
@@ -433,21 +446,13 @@ public class Face : Gtk.Stack, Clocks.Clock {
         dialog.show ();
     }
 
-    public void activate_select_all () {
-        content_view.select_all ();
-    }
-
-    public void activate_select_none () {
-        content_view.unselect_all ();
-    }
-
     public bool escape_pressed () {
         if (visible_child == standalone) {
             reset_view ();
             return true;
         }
 
-        return content_view.escape_pressed ();
+        return false;
     }
 
     public void reset_view () {
@@ -459,10 +464,6 @@ public class Face : Gtk.Stack, Clocks.Clock {
         switch (header_bar.mode) {
         case HeaderBar.Mode.NORMAL:
             new_button.show ();
-            content_view.update_header_bar ();
-            break;
-        case HeaderBar.Mode.SELECTION:
-            content_view.update_header_bar ();
             break;
         case HeaderBar.Mode.STANDALONE:
             header_bar.title = GLib.Markup.escape_text (standalone_location.city_name);
