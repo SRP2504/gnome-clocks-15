@@ -725,6 +725,40 @@ public class ContentView : Gtk.Bin {
     }
 }
 
+[GtkTemplate (ui = "/org/gnome/clocks/ui/locationtile.ui")]
+private class LocationTile : Gtk.EventBox {
+    [GtkChild]
+    public Gtk.Image weather_image;
+    [GtkChild]
+    public Gtk.Image geolocation_symbol;
+    [GtkChild]
+    public Gtk.EventBox close_event_box;
+    [GtkChild]
+    public Gtk.Label textl;
+    [GtkChild]
+    public Gtk.Label subtextl;
+    [GtkChild]
+    public Gtk.Label city_namel;
+    [GtkChild]
+    public Gtk.Label country_namel;
+    [GtkChild]
+    public Gtk.Frame details_frame;
+
+    public LocationTile (string? text, string? subtext, string? city_name, string? country_name, Gdk.Pixbuf? weather_pixbuf, bool geolocation) {
+        textl.label = text;
+        city_namel.label = city_name;
+        country_namel.label = country_name;
+        weather_image.set_from_pixbuf (weather_pixbuf);
+        if (geolocation) {
+            subtextl.set_no_show_all (true);
+            geolocation_symbol.show ();
+        } else {
+            subtextl.label = subtext;
+            subtextl.show ();
+        }
+    }
+}
+
 public class AmPmToggleButton : Gtk.Button {
     public enum AmPm {
         AM,
