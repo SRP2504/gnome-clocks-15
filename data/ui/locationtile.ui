@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <template class="ClocksLocationTile" parent="GtkEventBox">
+    <property name="visible">True</property>
+    <child>
+        <object class="GtkOverlay" id="outer_overlay">
+          <property name="visible">True</property>	
+          <child>
+            <object class="GtkImage" id="weather_image">
+              <property name="visible">True</property>
+              <property name="can_focus">False</property>
+            </object>
+          </child>
+          <child type="overlay">
+            <object class="GtkBox" id="outer_box">
+              <property name="visible">True</property>
+              <property name="orientation">vertical</property>
+              <property name="homogeneous">False</property>
+              <property name="spacing">30</property>
+              <child>
+                <object class="GtkEventBox" id="close_event_box">
+                  <property name="visible">True</property>
+                  <property name="halign">end</property>
+                  <property name="margin">10</property>
+                  <child>
+                    <object class="GtkImage" id="quit_image">
+                      <property name="visible">True</property>
+                      <property name="icon-name">window-close-symbolic</property>
+                      <property name="halign">end</property>
+                    </object>
+                  </child>
+                  <style>
+                    <class name="close-button-box"/>
+                  </style>
+                </object>
+                <packing>
+                  <property name="expand">False</property>
+                  <property name="fill">True</property>
+                  <property name="position">0</property>
+                </packing>
+              </child>
+              <child>
+                <object class="GtkFrame" id="details_frame">
+                  <property name="visible">True</property>
+                  <child>
+                    <object class="GtkGrid" id="details_grid">
+                      <property name="visible">True</property>
+                      <property name="halign">center</property>
+                      <property name="border-width">32</property>
+                      <child>
+                        <object class="GtkLabel" id="textl">
+                          <property name="visible">True</property>
+                          <style>
+                            <class name="time-label"/>
+                          </style>
+                        </object>
+                        <packing>
+                          <property name="left_attach">0</property>
+                          <property name="top_attach">0</property>
+                          <property name="width">1</property>
+                          <property name="height">1</property>
+                        </packing>
+                      </child>
+                      <child>
+                        <object class="GtkLabel" id="city_namel">
+                          <property name="visible">True</property>
+                          <property name="margin-top">10</property>
+                          <style>
+                            <class name="city-label"/>
+                          </style>
+                        </object>
+                        <packing>
+                          <property name="left_attach">0</property>
+                          <property name="top_attach">1</property>
+                          <property name="width">1</property>
+                          <property name="height">1</property>
+                        </packing>
+                      </child>
+                      <child>
+                        <object class="GtkLabel" id="country_namel">
+                          <property name="visible">True</property>
+                        </object>
+                        <packing>
+                          <property name="left_attach">0</property>
+                          <property name="top_attach">2</property>
+                          <property name="width">1</property>
+                          <property name="height">1</property>
+                        </packing>
+                      </child>
+                      <child>
+                        <object class="GtkLabel" id="subtextl">
+                          <property name="margin-top">10</property>
+                          <property name="no-show-all">True</property>
+                        </object>
+                        <packing>
+                          <property name="left_attach">0</property>
+                          <property name="top_attach">4</property>
+                          <property name="width">1</property>
+                          <property name="height">1</property>
+                        </packing>
+                      </child>
+                      <child>
+                        <object class="GtkImage" id="geolocation_symbol">
+                          <property name="margin-top">10</property>
+                          <property name="no-show-all">True</property>
+                          <property name="icon-size">1</property>
+                          <property name="icon-name">find-location-symbolic</property>
+                          <property name="halign">center</property>
+                        </object>
+                        <packing>
+                          <property name="left_attach">0</property>
+                          <property name="top_attach">5</property>
+                          <property name="width">1</property>
+                          <property name="height">1</property>
+                        </packing>
+                      </child>
+                    </object>
+                  </child>
+                </object>
+                <packing>
+                  <property name="pack-type">start</property>
+                  <property name="expand">False</property>
+                  <property name="fill">True</property>
+                  <property name="position">1</property>
+                </packing>
+              </child>
+            </object>
+          </child>
+        </object>
+    </child>
+  </template>
+</interface>
