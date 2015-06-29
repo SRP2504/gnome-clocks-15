@@ -771,9 +771,18 @@ public class ContentViewWorld : Gtk.Bin {
     private HeaderBar? header_bar;
     private Gtk.Box box_view;
     private Gtk.ListStore model;
-    private int window_width;
-    private int window_height;
+    private double window_width;
+    private double window_height;
+    private int loc_per_page;
+    private int left_most_loc;
     private const int MIN_TILE_WIDTH = 272;
+    private const int SCROLLING_ANIMATION_TIME = 1000000;
+    private Gtk.Adjustment hadjustment;
+    private Gtk.Overlay left_overlay;
+    private Gtk.Overlay right_overlay;
+    private Gtk.Button left_button;
+    private Gtk.Button right_button;
+    private uint tick_id = 0;
 
     construct {
         box_view = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
@@ -782,6 +791,8 @@ public class ContentViewWorld : Gtk.Bin {
         model = new Gtk.ListStore (Column.COLUMNS, typeof (ContentItem));
         window_width = 0;
         window_height = 0;
+        loc_per_page = 1;
+        left_most_loc = 0;
 
         var scrolled_window = new Gtk.ScrolledWindow (null, null);
         scrolled_window.add (box_view);
@@ -789,20 +800,64 @@ public class ContentViewWorld : Gtk.Bin {
         scrolled_window.vexpand = true;
         scrolled_window.halign = Gtk.Align.FILL;
         scrolled_window.valign = Gtk.Align.FILL;
+        scrolled_window.get_hscrollbar ().hide ();
+        hadjustment = scrolled_window.get_hadjustment ();
+        hadjustment.changed.connect(() => {
+            sync_left_right_buttons ();
+        });
+        hadjustment.value_changed.connect(() => {
+            sync_left_right_buttons ();
+        });
+
+        left_button = new Gtk.Button ();
+        left_button.get_style_context ().add_class ("osd");
+        Gtk.Image left_arrow_image = new Gtk.Image.from_icon_name ("go-previous-symbolic", Gtk.IconSize.MENU);
+        left_button.set_image (left_arrow_image);
+        left_button.set_valign (Gtk.Align.CENTER);
+        left_button.set_halign (Gtk.Align.START);
+        left_button.set_hexpand (false);
+        left_button.set_vexpand (false);
+        left_button.clicked.connect (() => {
+            double target = hadjustment.value - (window_width / loc_per_page);
+            begin_scroll_animation(target);
+            left_most_loc = left_most_loc - 1;
+        });
+
+        right_button = new Gtk.Button ();
+        right_button.get_style_context ().add_class ("osd");
+        Gtk.Image right_arrow_image = new Gtk.Image.from_icon_name ("go-next-symbolic", Gtk.IconSize.MENU);
+        right_button.set_image (right_arrow_image);
+        right_button.set_valign (Gtk.Align.CENTER);
+        right_button.set_halign (Gtk.Align.END);
+        right_button.set_hexpand (false);
+        right_button.set_vexpand (false);
+        right_button.clicked.connect (() => {
+            double target = hadjustment.value + (window_width / loc_per_page);
+            begin_scroll_animation(target);
+            left_most_loc = left_most_loc + 1;
+        });
+
+        left_overlay = new Gtk.Overlay ();
+        right_overlay = new Gtk.Overlay ();
+        right_overlay.add(scrolled_window);
+        right_overlay.add_overlay(right_button);
+        left_overlay.add(right_overlay);
+        left_overlay.add_overlay(left_button);
 
         grid = new Gtk.Grid ();
-        grid.attach (scrolled_window, 0, 0, 1, 1);
+        grid.attach (left_overlay, 0, 0, 1, 1);
 
         add (grid);
         grid.show_all ();
 
         this.size_allocate.connect (() => {
-            int width = this.get_allocated_width ();
-            int height = this.get_allocated_height ();
+            double width = this.get_allocated_width ();
+            double height = this.get_allocated_height ();
             if (window_width != width || window_height != height ) {
                 window_width = width;
                 window_height = height;
                 update_location_tile_size ();
+                hadjustment.value = left_most_loc * (window_width / loc_per_page);
             }
         });
     }
@@ -836,11 +891,57 @@ public class ContentViewWorld : Gtk.Bin {
         }
     }
 
-    private void calculate_location_tile_size (out int tile_width, out int tile_height) {
+    private void sync_left_right_buttons () {
+        if ((hadjustment.get_upper() - hadjustment.get_lower()) == hadjustment.page_size) {
+            left_button.hide ();
+            right_button.hide ();
+        } else if (hadjustment.value == hadjustment.get_lower()){
+            left_button.hide ();
+            right_button.show ();
+        } else if (hadjustment.value >= (hadjustment.get_upper() - hadjustment.page_size)){
+            left_button.show ();
+            right_button.hide ();
+        } else {
+            left_button.show ();
+            right_button.show ();
+        }
+    }
+
+    private void begin_scroll_animation (double target) {
+        double start = this.get_frame_clock().get_frame_time();
+        double end = start + SCROLLING_ANIMATION_TIME;
+
+        if (tick_id != 0)
+            this.remove_tick_callback(tick_id);
+
+        tick_id = this.add_tick_callback(() => {
+            return animate(target, start, end);
+        });
+    }
+
+    private bool animate (double target, double start, double end) {
+        double val = hadjustment.value;
+        double t = 1.0;
+        double now = this.get_frame_clock().get_frame_time();
+
+        if (now < end) {
+            t = (now - start) / SCROLLING_ANIMATION_TIME;
+            t = (t - 1) * (t - 1) * (t - 1) + 1;
+            hadjustment.value = val + t * (target - val);
+            return true;
+        } else {
+            hadjustment.value = val + t * (target - val);
+            tick_id = 0;
+            return false;
+        }
+    }
+
+    private void calculate_location_tile_size (out double tile_width, out double tile_height) {
         int number_of_locations = model.iter_n_children (null);
 
         if (number_of_locations != 0) {
-            tile_width = (int) Math.fmax (MIN_TILE_WIDTH, window_width / number_of_locations);
+            loc_per_page = (int) GLib.Math.floor (window_width / MIN_TILE_WIDTH);
+            tile_width = GLib.Math.fmax ((window_width / loc_per_page), (window_width / number_of_locations));
             tile_height = window_height;
         } else {
             tile_width = 0;
@@ -852,10 +953,10 @@ public class ContentViewWorld : Gtk.Bin {
         foreach (Gtk.Widget tile in box_view.get_children ()) {
             LocationTile location_tile = (LocationTile) tile;
             Gdk.Pixbuf? pixbuf = location_tile.weather_image.get_pixbuf ();
-            int width, height;
+            double width, height;
             calculate_location_tile_size (out width, out height);
             if (width > 0 && height > 0) {
-                pixbuf = pixbuf.scale_simple (width, height, Gdk.InterpType.BILINEAR);
+                pixbuf = pixbuf.scale_simple ((int) width, (int) height, Gdk.InterpType.BILINEAR);
                 location_tile.weather_image.set_from_pixbuf (pixbuf);
             }
         }
