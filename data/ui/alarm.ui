@@ -46,10 +46,12 @@
       </object>
     </child>
     <child>
-      <object class="ClocksContentView" id="content_view">
+      <object class="ClocksContentViewAlarm" id="content_view">
         <property name="visible">True</property>
         <signal name="item-activated" handler="item_activated" swapped="no"/>
-        <signal name="delete-selected" handler="delete_selected" swapped="no"/>
+        <signal name="delete-alarm" handler="delete_alarm" swapped="no"/>
+        <signal name="toggle-active-alarm" handler="toggle_active_alarm" swapped="no"/>
+        <signal name="change-alarm-label" handler="change_alarm_label" swapped="no"/>
         <signal name="notify::empty" handler="empty_changed" swapped="no"/>
       </object>
     </child>

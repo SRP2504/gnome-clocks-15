@@ -239,6 +239,21 @@ private class Item : Object, ContentItem {
         pixbuf = null;
     }
 
+    public void get_alarm_details (out string time_label,
+                                   out string days_label,
+                                   out bool active,
+                                   out string name_label) {
+        if (state == State.SNOOZING) {
+            time_label = snooze_time_label;
+            days_label = "(%s)".printf(time_label);
+        } else {
+            time_label = this.time_label;
+            days_label = repeat_label;
+        }
+        name_label = name;
+        active = this.active;
+    }
+
     public void serialize (GLib.VariantBuilder builder) {
         builder.open (new GLib.VariantType ("a{sv}"));
         builder.add ("{sv}", "name", new GLib.Variant.string (name));
@@ -528,7 +543,7 @@ public class Face : Gtk.Stack, Clocks.Clock {
     private GLib.Settings settings;
     private Gtk.Button new_button;
     [GtkChild]
-    private ContentView content_view;
+    private ContentViewAlarm content_view;
     [GtkChild]
     private Gtk.Widget empty_view;
     [GtkChild]
@@ -601,10 +616,23 @@ public class Face : Gtk.Stack, Clocks.Clock {
     }
 
     [GtkCallback]
-    private void delete_selected () {
-        foreach (var i in content_view.get_selected_items ()) {
-            alarms.remove ((Item) i);
-        }
+    private void toggle_active_alarm (ContentItem item) {
+        Item alarm = (Item) item;
+        alarm.active = !alarm.active;
+        alarm.reset ();
+        save ();
+    }
+
+    [GtkCallback]
+    private void change_alarm_label (ContentItem item, string label) {
+        Item alarm = (Item) item;
+        alarm.name = label;
+        save ();
+    }
+
+    [GtkCallback]
+    private void delete_alarm (ContentItem item) {
+        alarms.remove ((Item) item);
         save ();
     }
 
@@ -671,6 +699,8 @@ public class Face : Gtk.Stack, Clocks.Clock {
                 alarm.active = saved_active;
             }
             dialog.destroy ();
+            content_view.remove_alarm_tiles ();
+            content_view.add_alarm_tiles ();
         });
         dialog.show_all ();
     }
@@ -692,8 +722,8 @@ public class Face : Gtk.Stack, Clocks.Clock {
                 var alarm = new Item ();
                 ((SetupDialog) dialog).apply_to_alarm (alarm);
                 alarms.append (alarm);
-                content_view.add_item (alarm);
                 alarm.reset();
+                content_view.add_item (alarm);
                 save ();
             }
             dialog.destroy ();
@@ -701,26 +731,14 @@ public class Face : Gtk.Stack, Clocks.Clock {
         dialog.show_all ();
     }
 
-    public void activate_select_all () {
-        content_view.select_all ();
-    }
-
-    public void activate_select_none () {
-        content_view.unselect_all ();
-    }
-
     public bool escape_pressed () {
-        return content_view.escape_pressed ();
+        return false;
     }
 
     public void update_header_bar () {
         switch (header_bar.mode) {
         case HeaderBar.Mode.NORMAL:
             new_button.show ();
-            content_view.update_header_bar ();
-            break;
-        case HeaderBar.Mode.SELECTION:
-            content_view.update_header_bar ();
             break;
         case HeaderBar.Mode.STANDALONE:
             header_bar.title = GLib.Markup.escape_text (ringing_panel.alarm.name);

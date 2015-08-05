@@ -750,6 +750,238 @@ public class AlarmTile : Gtk.EventBox {
     }
 }
 
+public class ContentViewAlarm : Gtk.Bin {
+    public bool empty { get; private set; default = true; }
+
+    public enum Column {
+        ITEM,
+        COLUMNS
+    }
+
+    private Gtk.Grid grid;
+    private HeaderBar? header_bar;
+    private Gtk.Box box_view;
+    private Gtk.ListStore model;
+    private int window_width;
+    private int window_height;
+
+    construct {
+        box_view = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
+        ((Gtk.Widget) box_view).set_valign (Gtk.Align.CENTER);
+        box_view.show_all ();
+        model = new Gtk.ListStore (Column.COLUMNS, typeof (ContentItem));
+        window_width = 0;
+        window_height = 0;
+
+        var scrolled_window = new Gtk.ScrolledWindow (null, null);
+        scrolled_window.add (box_view);
+        scrolled_window.hexpand = true;
+        scrolled_window.vexpand = true;
+        scrolled_window.halign = Gtk.Align.FILL;
+        scrolled_window.valign = Gtk.Align.FILL;
+
+        grid = new Gtk.Grid ();
+        grid.attach (scrolled_window, 0, 0, 1, 1);
+
+        add (grid);
+        grid.show_all ();
+
+        this.size_allocate.connect (() => {
+            int width = this.get_allocated_width ();
+            int height = this.get_allocated_height ();
+            if (window_width != width || window_height != height ) {
+                window_width = width;
+                window_height = height;
+                update_alarm_tile_size ();
+            }
+        });
+    }
+
+    public signal void item_activated (ContentItem item);
+
+    public signal void toggle_active_alarm (ContentItem item);
+
+    public signal void change_alarm_label (ContentItem item, string label);
+
+    public virtual signal void delete_alarm (ContentItem item) {
+        model.foreach ((model, path, iter) => {
+            Object item_in_list;
+            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+            if (item_in_list == item) {
+                ((Gtk.ListStore) model).remove (iter);
+                return true;
+            }
+            return false;
+        });
+        update_alarm_tile_size ();
+        update_props_on_remove ();
+    }
+
+    private void update_props_on_remove () {
+        Gtk.TreeIter iter;
+
+        var local_empty = true;
+        if (model.get_iter_first (out iter)) {
+            local_empty = false;
+        }
+
+        if (local_empty != empty) {
+            empty = local_empty;
+        }
+    }
+
+    private void calculate_alarm_tile_size (out int tile_width, out int tile_height) {
+        int number_of_alarms = model.iter_n_children (null);
+
+        if (number_of_alarms != 0) {
+            if ((window_width/number_of_alarms) < 272) {
+                tile_width = 272;
+            } else {
+                tile_width = (window_width/number_of_alarms);
+            }
+            tile_height = window_height;
+        } else {
+            tile_width = 0;
+            tile_height = 0;
+        }
+    }
+
+    public void update_alarm_tile_size () {
+        foreach (Gtk.Widget tile in box_view.get_children ()) {
+            if (tile is AlarmTile) {
+                int width, height;
+                calculate_alarm_tile_size (out width, out height);
+                if (width > 0 && height > 0) {
+                    tile.set_size_request (width, height);
+                }
+            }
+        }
+    }
+
+    public void remove_alarm_tiles () {
+        foreach (Gtk.Widget tile in box_view.get_children ()) {
+            tile.destroy ();
+        }
+    }
+
+    public void add_alarm_tiles () {
+        model.foreach ((model, path, iter) => {
+            Object item_in_list;
+            ((Gtk.ListStore) model).get (iter, Column.ITEM, out item_in_list);
+            AlarmTile tile = get_alarm_tile ((ContentItem) item_in_list, 300, 800);
+            box_view.pack_start (tile, true, true, 0);
+            update_alarm_tile_size ();
+            return false;
+        });
+    }
+
+    private AlarmTile get_alarm_tile (Object item, int width, int height) {
+        string time_label;
+        string days_label;
+        bool active;
+        string name_label;
+        ((Clocks.Alarm.Item) item).get_alarm_details (out time_label,
+                                               out days_label,
+                                               out active,
+                                               out name_label);
+
+        AlarmTile tile = new AlarmTile (time_label, days_label, active, name_label);
+        tile.set_size_request (width, height);
+
+        tile.close_event_box.button_press_event.connect (() => {
+            tile.destroy ();
+            delete_alarm ((ContentItem) item);
+            return true;
+        });
+
+        tile.label_event_box.button_press_event.connect (() => {
+            Gtk.Box box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
+            Gtk.Label label = new Gtk.Label (_("Label"));
+            label.show ();
+            Gtk.Entry entry = new Gtk.Entry ();
+            entry.show ();
+            box.pack_start (label, true, true, 0);
+            box.pack_start (entry, true, true, 1);
+            Gtk.Box button_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 5);
+            button_box.set_homogeneous (true);
+            Gtk.Button cancel_button = new Gtk.Button ();
+            cancel_button.set_label (_("Cancel"));
+            cancel_button.show ();
+            Gtk.Button add_button = new Gtk.Button ();
+            add_button.set_label (_("Add"));
+            add_button.show ();
+            button_box.pack_start (cancel_button, true, true, 0);
+            button_box.pack_start (add_button, true, true, 1);
+            button_box.show_all ();
+            box.pack_start (button_box, true, true, 3);
+            box.show_all ();
+            Gtk.Popover popover = new Gtk.Popover (tile.label_event_box);
+            popover.add (box);
+            popover.show ();
+
+            cancel_button.clicked.connect (() => {
+                popover.destroy ();
+            });
+
+            add_button.clicked.connect (() => {
+                string entry_label = entry.get_text ();
+                tile.name_label.label = entry_label;
+                change_alarm_label ((ContentItem) item, entry_label);
+                popover.destroy ();
+            });
+            return true;
+        });
+
+        tile.active_switch.notify["active"].connect (() => {
+            toggle_active_alarm ((ContentItem) item);
+        });
+
+        tile.button_press_event.connect (() => {
+            item_activated ((ContentItem) item);
+            return false;
+        });
+
+        return tile;
+    }
+
+    public void add_item (ContentItem item) {
+        var store = (Gtk.ListStore) model;
+        Gtk.TreeIter i;
+        store.append (out i);
+        store.set (i, Column.ITEM, item);
+        AlarmTile tile = get_alarm_tile (item, 300, 800);
+        box_view.pack_start (tile, true, true, 0);
+        update_alarm_tile_size ();
+        update_props_on_insert ();
+    }
+
+    private void update_props_on_insert () {
+        if (empty) {
+            empty = false;
+        }
+    }
+
+    public void set_header_bar (HeaderBar bar) {
+        header_bar = bar;
+    }
+
+    public delegate int SortFunc(ContentItem item1, ContentItem item2);
+
+    public void set_sorting(Gtk.SortType sort_type, SortFunc sort_func) {
+        var sortable = model as Gtk.TreeSortable;
+        sortable.set_sort_column_id (0, sort_type);
+        sortable.set_sort_func (0, (model, iter1, iter2) => {
+            ContentItem item1;
+            ContentItem item2;
+
+            model.get (iter1, Column.ITEM, out item1);
+            model.get (iter2, Column.ITEM, out item2);
+
+            return sort_func (item1, item2);
+        });
+    }
+}
+
 public class AmPmToggleButton : Gtk.Button {
     public enum AmPm {
         AM,
