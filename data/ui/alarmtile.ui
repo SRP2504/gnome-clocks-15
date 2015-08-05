@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <template class="ClocksAlarmTile" parent="GtkEventBox">
+    <property name="visible">True</property>
+    <property name="border-width">10</property>
+    <child>
+      <object class="GtkBox" id="main_box">
+        <property name="visible">True</property>
+        <property name="orientation">horizontal</property>
+        <property name="spacing">5</property>
+        <child>
+            <object class="GtkOverlay" id="outer_overlay">
+              <property name="visible">True</property>	
+              <child>
+                <object class="GtkImage" id="alarm_bg_image">
+                  <property name="visible">True</property>
+                  <property name="can_focus">False</property>
+                </object>
+              </child>
+              <child type="overlay">
+                <object class="GtkBox" id="outer_box">
+                  <property name="visible">True</property>
+                  <property name="orientation">vertical</property>
+                  <property name="homogeneous">False</property>
+                  <property name="spacing">30</property>
+                  <child>
+                    <object class="GtkEventBox" id="close_event_box">
+                      <property name="visible">True</property>
+                      <property name="halign">end</property>
+                      <child>
+                        <object class="GtkImage" id="quit_image">
+                          <property name="visible">True</property>
+                          <property name="icon-name">window-close-symbolic</property>
+                          <property name="halign">end</property>
+                        </object>
+                      </child>
+                    </object>
+                    <packing>
+                      <property name="expand">False</property>
+                      <property name="fill">True</property>
+                      <property name="position">0</property>
+                    </packing>
+                  </child>
+                  <child>
+                    <object class="GtkLabel" id="time_label">
+                      <property name="visible">True</property>
+                      <style>
+                        <class name="time-label"/>
+                      </style>
+                    </object>
+                    <packing>
+                      <property name="pack-type">start</property>
+                      <property name="expand">False</property>
+                      <property name="fill">True</property>
+                      <property name="position">1</property>
+                    </packing>
+                  </child>
+                  <child>
+                    <object class="GtkLabel" id="days_label">
+                      <property name="visible">True</property>
+                    </object>
+                    <packing>
+                      <property name="pack-type">start</property>
+                      <property name="expand">False</property>
+                      <property name="fill">True</property>
+                      <property name="position">2</property>
+                    </packing>
+                  </child>
+                  <child>
+                    <object class="GtkSwitch" id="active_switch">
+                      <property name="visible">True</property>
+                      <property name="halign">center</property>
+                      <property name="hexpand">False</property>
+                    </object>
+                    <packing>
+                      <property name="pack-type">start</property>
+                      <property name="expand">False</property>
+                      <property name="fill">False</property>
+                      <property name="position">3</property>
+                    </packing>
+                  </child>
+                  <child>
+                    <object class="GtkEventBox" id="label_event_box">
+                      <property name="visible">True</property>
+                      <property name="halign">center</property>
+                      <child>
+                        <object class="GtkBox" id="label_box">
+                          <property name="visible">True</property>
+                          <property name="orientation">horizontal</property>
+                          <property name="spacing">5</property>
+                          <child>
+                            <object class="GtkImage" id="label_image">
+                              <property name="visible">True</property>
+                              <property name="icon-name">text-editor-symbolic</property>
+                              <property name="halign">center</property>
+                            </object>
+                            <packing>
+                              <property name="expand">False</property>
+                              <property name="fill">False</property>
+                              <property name="position">0</property>
+                            </packing>
+                          </child>
+                          <child>
+                            <object class="GtkLabel" id="name_label">
+                              <property name="visible">True</property>
+                              <property name="halign">center</property>
+                            </object>
+                            <packing>
+                              <property name="expand">False</property>
+                              <property name="fill">False</property>
+                              <property name="position">1</property>
+                            </packing>
+                          </child>
+                        </object>
+                      </child>
+                    </object>
+                    <packing>
+                      <property name="expand">False</property>
+                      <property name="fill">True</property>
+                      <property name="position">4</property>
+                    </packing>
+                  </child>
+                </object>
+              </child>
+            </object>
+            <packing>
+              <property name="expand">True</property>
+              <property name="fill">True</property>
+              <property name="position">0</property>
+            </packing>
+        </child>
+        <child>
+            <object class="GtkSeparator" id="separator">
+              <property name="visible">True</property>
+              <property name="orientation">vertical</property>
+              <property name="hexpand">False</property>
+              <property name="vexpand">True</property>
+            </object>
+            <packing>
+              <property name="expand">False</property>
+              <property name="fill">True</property>
+              <property name="position">1</property>
+            </packing>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
