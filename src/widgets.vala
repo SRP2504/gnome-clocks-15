@@ -725,6 +725,31 @@ public class ContentView : Gtk.Bin {
     }
 }
 
+[GtkTemplate (ui = "/org/gnome/clocks/ui/alarmtile.ui")]
+public class AlarmTile : Gtk.EventBox {
+    [GtkChild]
+    public Gtk.EventBox close_event_box;
+    [GtkChild]
+    public Gtk.Label time_label;
+    [GtkChild]
+    public Gtk.Label days_label;
+    [GtkChild]
+    public Gtk.Switch active_switch;
+    [GtkChild]
+    public Gtk.EventBox label_event_box;
+    [GtkChild]
+    public Gtk.Label name_label;
+    [GtkChild]
+    public Gtk.Separator separator;
+
+    public AlarmTile (string? time, string? days, bool? active, string? label) {
+        time_label.label = time;
+        days_label.label = days;
+        name_label.label = label;
+        active_switch.set_active (active);
+    }
+}
+
 public class AmPmToggleButton : Gtk.Button {
     public enum AmPm {
         AM,
